@@ -73,43 +73,70 @@ struct HomeView: View {
     // MARK: - Top Navigation Bar
     
     private var topNavigationBar: some View {
-        HStack {
+        HStack(spacing: AppSpacing.md) {
             // Location Button
             Button(action: {
                 appRouter.showRestaurantFinderScreen()
             }) {
-                HStack(spacing: AppSpacing.sm) {
-                    Image(systemName: "location.fill")
-                        .font(AppFonts.callout)
+                HStack(spacing: 12) {
+                    Image(systemName: "location.north.fill")
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(AppColors.primaryRed)
-                    
+                        .frame(width: 48, height: 48)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(AppColors.primaryRed.opacity(0.08))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(AppColors.primaryRed.opacity(0.12), lineWidth: 1)
+                        )
+
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(appState.isLocationEnabled ? "Current Location" : "Select Location")
-                            .font(AppFonts.caption)
-                            .foregroundColor(AppColors.tertiaryText)
-                        
+                        HStack(spacing: 6) {
+                            Text(appState.isLocationEnabled ? "Current Location" : "Select Location")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(AppColors.secondaryText)
+
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(AppColors.tertiaryText)
+                        }
+
                         Text(appState.userLocation)
-                            .font(AppFonts.callout)
+                            .font(.system(size: 13, weight: .bold))
                             .foregroundColor(AppColors.primaryText)
                             .lineLimit(1)
                     }
                 }
             }
-            
+            .buttonStyle(.plain)
+
             Spacer()
-            
+
             // Profile Button
             Button(action: {
                 appRouter.showProfileScreen()
             }) {
-                Image(systemName: "person.circle.fill")
-                    .font(.system(size: 32))
+                Image(systemName: "person")
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(AppColors.primaryRed)
+                    .frame(width: 48, height: 48)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(AppColors.primaryRed.opacity(0.08))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(AppColors.primaryRed.opacity(0.12), lineWidth: 1)
+                    )
             }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, AppSpacing.lg)
-        .padding(.vertical, AppSpacing.md)
-        .background(AppColors.white)
+        .padding(.top, AppSpacing.sm)
+        .padding(.bottom, AppSpacing.md)
+        // no white background: header sits on the soft page background
     }
     
     // MARK: - Order Type Handler
@@ -128,22 +155,27 @@ struct HomeView: View {
     // MARK: - Order Type Selector
     
     private var orderTypeSelector: some View {
-        VStack(spacing: AppSpacing.md) {
-            HStack(spacing: AppSpacing.sm) {
-                ForEach(OrderType.allCases, id: \.self) { orderType in
-                    OrderTypeButton(
-                        orderType: orderType,
-                        isSelected: appState.selectedOrderType == orderType,
-                        action: {
-                            handleOrderTypeSelection(orderType)
-                        }
-                    )
-                }
+        HStack(spacing: 4) {
+            ForEach(OrderType.allCases, id: \.self) { orderType in
+                OrderTypeButton(
+                    orderType: orderType,
+                    isSelected: appState.selectedOrderType == orderType,
+                    action: { handleOrderTypeSelection(orderType) }
+                )
             }
-            .padding(.horizontal, AppSpacing.lg)
         }
-        .padding(.vertical, AppSpacing.sm)
-        .background(AppColors.white)
+        .padding(6)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.black.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+        )
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.bottom, AppSpacing.md)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: appState.selectedOrderType)
     }
     
     // MARK: - Location Permission Banner
@@ -306,43 +338,57 @@ struct HomeView: View {
     
     // MARK: - Active Offers Section
     
+    // MARK: - Active Offers Section
+
     private var activeOffersSection: some View {
         VStack(spacing: AppSpacing.md) {
-            HStack {
-                Text("Latest Offers")
-                    .font(AppFonts.title)
-                    .foregroundColor(AppColors.primaryText)
-                
-                Spacer()
-                
-                Button(action: {
-                    appRouter.selectTab(.rewards)
-                }) {
-                    Text("View All")
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Latest Offers")
+                        .font(.system(size: 26, weight: .heavy))
+                        .foregroundColor(AppColors.primaryText)
+
+                    Text("Exclusive deals handpicked for you")
                         .font(AppFonts.subheadline)
-                        .foregroundColor(AppColors.primaryRed)
+                        .foregroundColor(AppColors.tertiaryText)
                 }
+
+                Spacer()
+
+                Button(action: { appRouter.selectTab(.rewards) }) {
+                    HStack(spacing: 4) {
+                        Text("View All")
+                            .font(.system(size: 15, weight: .semibold))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .bold))
+                    }
+                    .foregroundColor(AppColors.primaryRed)
+                }
+                .padding(.top, 6)
             }
             .padding(.horizontal, AppSpacing.lg)
-            
+
             if !latestOffers.isEmpty {
-                VStack(spacing: AppSpacing.md) {
-                    ForEach(latestOffers.prefix(2)) { offer in
-                        LatestOfferCard(offer: offer)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: AppSpacing.md) {
+                        ForEach(Array(latestOffers.enumerated()), id: \.element.id) { index, offer in
+                            LatestOfferCard(
+                                offer: offer,
+                                style: index % 2 == 0 ? .red : .dark
+                            )
+                        }
                     }
+                    .padding(.horizontal, AppSpacing.lg)
                 }
-                .padding(.horizontal, AppSpacing.lg)
             } else {
-                VStack(spacing: AppSpacing.md) {
-                    Text("No active offers right now")
-                        .font(AppFonts.subheadline)
-                        .foregroundColor(AppColors.secondaryText)
-                }
-                .padding(AppSpacing.xl)
-                .frame(maxWidth: .infinity)
-                .background(AppColors.white)
-                .cornerRadius(AppSpacing.cornerRadius)
-                .padding(.horizontal, AppSpacing.lg)
+                Text("No active offers right now")
+                    .font(AppFonts.subheadline)
+                    .foregroundColor(AppColors.secondaryText)
+                    .padding(AppSpacing.xl)
+                    .frame(maxWidth: .infinity)
+                    .background(AppColors.white)
+                    .cornerRadius(AppSpacing.cornerRadius)
+                    .padding(.horizontal, AppSpacing.lg)
             }
         }
         .padding(.top, AppSpacing.xl)
@@ -382,54 +428,135 @@ struct OrderTypeButton: View {
     let orderType: OrderType
     let isSelected: Bool
     let action: () -> Void
-    
+
+    // Outline-style icons to match the new design
+    private var iconName: String {
+        switch orderType {
+        case .delivery: return "bicycle"
+        case .takeaway: return "bag"
+        case .dineIn:   return "fork.knife"
+        }
+    }
+
     var body: some View {
         Button(action: action) {
-            VStack(spacing: AppSpacing.xs) {
-                Image(systemName: orderType.icon)
-                    .font(.system(size: 20))
-                    .foregroundColor(isSelected ? .white : AppColors.primaryRed)
-                
+            HStack(spacing: 8) {
+                Image(systemName: iconName)
+                    .font(.system(size: 16, weight: .semibold))
+
                 Text(orderType.displayName)
-                    .font(AppFonts.caption)
-                    .foregroundColor(isSelected ? .white : AppColors.primaryRed)
+                    .font(.system(size: 16, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
+            .foregroundColor(isSelected ? .white : Color.black.opacity(0.55))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, AppSpacing.sm)
+            .padding(.vertical, 14)
             .background(
-                RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
-                    .fill(isSelected ? AppColors.primaryRed : AppColors.secondaryBackground)
+                Group {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        AppColors.primaryRed,
+                                        AppColors.primaryRed.opacity(0.75)
+                                            .mix(with: .black, by: 0.35)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .shadow(color: AppColors.primaryRed.opacity(0.35),
+                                    radius: 8, x: 0, y: 4)
+                    }
+                }
             )
         }
+        .buttonStyle(.plain)
     }
 }
 
 // MARK: - Offer Banner View
+//struct OfferBannerView: View {
+//    let banner: OfferBanner
+//    
+//    var body: some View {
+//        ZStack {
+//            // Background color from banner or default
+//            Group {
+//                if let backgroundColor = banner.backgroundColor {
+//                    Color(hex: backgroundColor)
+//                } else {
+//                    AppColors.primaryRed
+//                }
+//            }
+//            .ignoresSafeArea()
+//            
+//            VStack(spacing: AppSpacing.sm) {
+//                Spacer()
+//                
+//                VStack(spacing: AppSpacing.xs) {
+//                    Text(banner.title)
+//                        .font(AppFonts.headline)
+//                        .fontWeight(.bold)
+//                        .foregroundColor(.white)
+//                        .multilineTextAlignment(.center)
+//                    
+//                    if !banner.subtitle.isEmpty {
+//                        Text(banner.subtitle)
+//                            .font(AppFonts.title)
+//                            .foregroundColor(.white.opacity(0.9))
+//                            .multilineTextAlignment(.center)
+//                    }
+//                }
+//                
+//                Spacer()
+//                
+//                Button(action: {}) {
+//                    Text(banner.callToAction)
+//                        .font(AppFonts.callout)
+//                        .fontWeight(.semibold)
+//                        .foregroundColor(AppColors.primaryRed)
+//                        .padding(.horizontal, AppSpacing.xl)
+//                        .padding(.vertical, AppSpacing.sm)
+//                        .background(.white)
+//                        .cornerRadius(AppSpacing.cornerRadius)
+//                }
+//                
+//                Spacer()
+//            }
+//            .padding(AppSpacing.lg)
+//        }
+//        .cornerRadius(AppSpacing.cornerRadius)
+//    }
+//}
+
+
 struct OfferBannerView: View {
     let banner: OfferBanner
-    
+
+    private var baseColor: Color {
+        if let hex = banner.backgroundColor {
+            return Color(hex: hex)
+        }
+        return AppColors.primaryRed
+    }
+
     var body: some View {
         ZStack {
-            // Background color from banner or default
-            Group {
-                if let backgroundColor = banner.backgroundColor {
-                    Color(hex: backgroundColor)
-                } else {
-                    AppColors.primaryRed
-                }
-            }
-            .ignoresSafeArea()
-            
+            backgroundLayer
+
             VStack(spacing: AppSpacing.sm) {
                 Spacer()
-                
+
                 VStack(spacing: AppSpacing.xs) {
                     Text(banner.title)
                         .font(AppFonts.headline)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
-                    
+
                     if !banner.subtitle.isEmpty {
                         Text(banner.subtitle)
                             .font(AppFonts.title)
@@ -438,8 +565,16 @@ struct OfferBannerView: View {
                     }
                 }
                 
+                if let des = banner.description, !des.isEmpty {
+                    Text(des)
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                }
+            
+
                 Spacer()
-                
+
                 Button(action: {}) {
                     Text(banner.callToAction)
                         .font(AppFonts.callout)
@@ -450,12 +585,37 @@ struct OfferBannerView: View {
                         .background(.white)
                         .cornerRadius(AppSpacing.cornerRadius)
                 }
-                
+
                 Spacer()
             }
             .padding(AppSpacing.lg)
         }
-        .cornerRadius(AppSpacing.cornerRadius)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
+    }
+
+    // Blurred pizza image over the red, with a dark fade toward the bottom-right
+    private var backgroundLayer: some View {
+        ZStack {
+            baseColor
+
+            // Color.clear + overlay keeps the image from expanding the banner's size
+            Color.clear
+                .overlay(
+                    Image("pizza")
+                        .resizable()
+                        .scaledToFill()
+                        .blur(radius: 10)
+                        .opacity(0.3)
+                        .blendMode(.overlay)
+                )
+                .clipped()
+
+            LinearGradient(
+                colors: [.clear, Color.black.opacity(0.45)],
+                startPoint: .top,
+                endPoint: .bottomTrailing
+            )
+        }
     }
 }
 
@@ -565,71 +725,158 @@ struct ErrorView: View {
 }
 
 // MARK: - Latest Offer Card
+// MARK: - Latest Offer Card
+
+enum OfferCardStyle {
+    case red, dark
+
+    var gradient: LinearGradient {
+        switch self {
+        case .red:
+            return LinearGradient(
+                colors: [Color(hex: "A0281F"), Color(hex: "7A130F"), Color(hex: "5E0D0A")],
+                startPoint: .topTrailing, endPoint: .bottomLeading)
+        case .dark:
+            return LinearGradient(
+                colors: [Color(hex: "2E2E2E"), Color(hex: "1C1C1C")],
+                startPoint: .topTrailing, endPoint: .bottomLeading)
+        }
+    }
+
+    var badgeBackground: Color {
+        switch self {
+        case .red:  return Color(hex: "F6C244")
+        case .dark: return AppColors.primaryRed
+        }
+    }
+
+    var badgeForeground: Color {
+        switch self {
+        case .red:  return Color(hex: "3A2A00")
+        case .dark: return .white
+        }
+    }
+
+    var borderColor: Color {
+        switch self {
+        case .red:  return Color(hex: "B0352B")
+        case .dark: return Color.white.opacity(0.12)
+        }
+    }
+
+    var buttonForeground: Color {
+        switch self {
+        case .red:  return Color(hex: "7A130F")
+        case .dark: return .black
+        }
+    }
+}
+
 struct LatestOfferCard: View {
     let offer: LatestOffer
-    @State private var isCodeCopied: Bool = false
-    
+    var style: OfferCardStyle = .red
+    @State private var isCodeCopied = false
+
+    private let gold = Color(hex: "F6C244")
+
     var body: some View {
-        VStack(spacing: AppSpacing.md) {
+        VStack(alignment: .leading, spacing: 14) {
+
+            // Badge + timer
             HStack {
-                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(offer.title)
-                        .font(AppFonts.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(AppColors.primaryRed)
-                    
-                    Text(offer.description)
-                        .font(AppFonts.subheadline)
-                        .foregroundColor(AppColors.secondaryText)
-                }
-                
+                Text(offer.title.uppercased())
+                    .font(.system(size: 13, weight: .heavy))
+                    .tracking(1.2)
+                    .foregroundColor(style.badgeForeground)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(style.badgeBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
                 Spacer()
-                
-                VStack(alignment: .trailing, spacing: AppSpacing.xs) {
+
+                HStack(spacing: 6) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(gold)
                     Text(offer.timeRemaining)
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.warmOrange)
-                        .fontWeight(.semibold)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white.opacity(0.75))
                 }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.black.opacity(0.22))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
-            
-            HStack(spacing: AppSpacing.sm) {
-                Button(action: {
-                    // Copy promo code
-                    UIPasteboard.general.string = offer.promoCode
-                    isCodeCopied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        isCodeCopied = false
-                    }
-                }) {
-                    Text(offer.promoCode)
-                        .font(AppFonts.callout)
-                        .fontWeight(.semibold)
-                        .foregroundColor(isCodeCopied ? .green : AppColors.primaryRed)
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.sm)
-                        .background(AppColors.lightGray)
-                        .cornerRadius(AppSpacing.smallCornerRadius)
+
+            // Heading + details
+            VStack(alignment: .leading, spacing: 6) {
+                Text(offer.title)
+                    .font(.system(size: 22, weight: .heavy))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+
+                Text(offer.description)
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.75))
+                    .lineSpacing(3)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Rectangle()
+                .fill(Color.white.opacity(0.15))
+                .frame(height: 1)
+
+            // Code + Apply
+            HStack {
+                Button(action: copyCode) {
+                    Text(isCodeCopied ? "COPIED" : offer.promoCode)
+                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        .tracking(1)
+                        .foregroundColor(isCodeCopied ? .green : gold)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(Color.black.opacity(0.25))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.35),
+                                              style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        )
                 }
-                
-                Button(action: {}) {
-                    Text("Apply Code")
-                        .font(AppFonts.callout)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.sm)
-                        .background(AppColors.primaryRed)
-                        .cornerRadius(AppSpacing.smallCornerRadius)
-                }
-                
+                .buttonStyle(.plain)
+
                 Spacer()
+
+                Button(action: { /* apply code to cart */ }) {
+                    Text("Apply Code")
+                        .font(.system(size: 15, weight: .heavy))
+                        .foregroundColor(style.buttonForeground)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 11)
+                        .background(Color.white)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(AppSpacing.lg)
-        .background(AppColors.white)
-        .cornerRadius(AppSpacing.cornerRadius)
-        .shadow(color: AppColors.shadow, radius: 2, x: 0, y: 1)
+        .frame(width: 320)
+        .background(style.gradient)
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(style.borderColor, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+    }
+
+    private func copyCode() {
+        UIPasteboard.general.string = offer.promoCode
+        isCodeCopied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { isCodeCopied = false }
     }
 }
 

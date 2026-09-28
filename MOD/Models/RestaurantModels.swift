@@ -155,10 +155,11 @@ struct Restaurant: Codable, Identifiable {
 
 // MARK: - Offer Banner Model
 struct OfferBanner: Codable, Identifiable {
+    var badge: String?
     let id: String
     let title: String
     let subtitle: String
-    let description: String
+    let description: String?
     let image: String?
     let backgroundColor: String?
     let textColor: String?
@@ -179,6 +180,7 @@ struct OfferBanner: Codable, Identifiable {
     
     init(id: String = UUID().uuidString,
          title: String,
+         badge: String,
          subtitle: String,
          description: String,
          image: String? = nil,
@@ -190,6 +192,7 @@ struct OfferBanner: Codable, Identifiable {
          startDate: Date = Date(),
          endDate: Date = Date().addingTimeInterval(86400 * 7),
          sortOrder: Int = 0) {
+        self.badge = badge
         self.id = id
         self.title = title
         self.subtitle = subtitle

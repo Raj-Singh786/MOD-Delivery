@@ -544,7 +544,7 @@ struct MockData {
     static let offerBanners: [OfferBanner] = [
         OfferBanner(
             id: "banner1",
-            title: "DOUBLE THE POINTS",
+            title: "DOUBLE THE POINTS", badge: "WEEKEND SPECIAL",
             subtitle: "This Weekend",
             description: "Earn 2X Loyalty Points on your favorite MOD Pizza.",
             backgroundColor: "#8B0000",
