@@ -205,3 +205,55 @@ struct OfferBanner: Codable, Identifiable {
         self.sortOrder = sortOrder
     }
 }
+
+// MARK: - Latest Offer Model
+struct LatestOffer: Codable, Identifiable {
+    let id: String
+    let title: String
+    let description: String
+    let discountPercentage: String
+    let promoCode: String
+    let endDate: Date
+    let minOrderValue: Double?
+    let applicableCategories: [String]?
+    let isActive: Bool
+    
+    var timeRemaining: String {
+        let remaining = endDate.timeIntervalSinceNow
+        if remaining <= 0 {
+            return "Expired"
+        }
+        
+        let hours = Int(remaining / 3600)
+        let minutes = Int((remaining.truncatingRemainder(dividingBy: 3600)) / 60)
+        
+        if hours > 24 {
+            let days = hours / 24
+            return "Ends in \(days)d"
+        } else if hours > 0 {
+            return "Ends in \(hours)h"
+        } else {
+            return "Ends in \(minutes)m"
+        }
+    }
+    
+    init(id: String = UUID().uuidString,
+         title: String,
+         description: String,
+         discountPercentage: String,
+         promoCode: String,
+         endDate: Date = Date().addingTimeInterval(7200),
+         minOrderValue: Double? = nil,
+         applicableCategories: [String]? = nil,
+         isActive: Bool = true) {
+        self.id = id
+        self.title = title
+        self.description = description
+        self.discountPercentage = discountPercentage
+        self.promoCode = promoCode
+        self.endDate = endDate
+        self.minOrderValue = minOrderValue
+        self.applicableCategories = applicableCategories
+        self.isActive = isActive
+    }
+}

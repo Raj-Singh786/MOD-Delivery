@@ -8,6 +8,7 @@ struct HomeView: View {
     @State private var offerBanners: [OfferBanner] = []
     @State private var loyaltySummary: LoyaltySummary?
     @State private var popularItems: [MenuItem] = []
+    @State private var latestOffers: [LatestOffer] = []
     @State private var isLoading: Bool = true
     @State private var errorMessage: String?
     
@@ -141,7 +142,7 @@ struct HomeView: View {
             }
             .padding(.horizontal, AppSpacing.lg)
         }
-        .padding(.vertical, AppSpacing.md)
+        .padding(.vertical, AppSpacing.sm)
         .background(AppColors.white)
     }
     
@@ -214,14 +215,6 @@ struct HomeView: View {
                             .foregroundColor(AppColors.primaryText)
                         
                         Spacer()
-                        
-                        Button(action: {
-                            appRouter.selectTab(.rewards)
-                        }) {
-                            Text("View Rewards")
-                                .font(AppFonts.subheadline)
-                                .foregroundColor(AppColors.primaryRed)
-                        }
                     }
                     
                     HStack(spacing: AppSpacing.lg) {
@@ -238,12 +231,12 @@ struct HomeView: View {
                         Divider()
                         
                         VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                            Text("+\(summary.pendingPoints)")
+                            Text("+\(summary.pendingPoints) PTS")
                                 .font(AppFonts.headline)
                                 .foregroundColor(AppColors.warmOrange)
                             
-                            Text("Pending")
-                                .font(AppFonts.subheadline)
+                            Text("Pending Verification")
+                                .font(AppFonts.caption)
                                 .foregroundColor(AppColors.secondaryText)
                         }
                         
@@ -252,12 +245,21 @@ struct HomeView: View {
                     
                     if let pointsToNext = summary.pointsToNextReward {
                         VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                            let progress = Int((Double(summary.availablePoints) / Double(summary.availablePoints + pointsToNext)) * 100)
                             Text("\(pointsToNext) points until ₹100 Off")
                                 .font(AppFonts.subheadline)
                                 .foregroundColor(AppColors.secondaryText)
                             
-                            ProgressView(value: Double(summary.availablePoints), total: Double(summary.availablePoints + pointsToNext))
-                                .tint(AppColors.primaryRed)
+                            HStack {
+                                ProgressView(value: Double(summary.availablePoints), total: Double(summary.availablePoints + pointsToNext))
+                                    .tint(AppColors.primaryRed)
+                                
+                                Spacer()
+                                
+                                Text("\(progress)%")
+                                    .font(AppFonts.caption)
+                                    .foregroundColor(AppColors.secondaryText)
+                            }
                         }
                     }
                 }
@@ -323,17 +325,25 @@ struct HomeView: View {
             }
             .padding(.horizontal, AppSpacing.lg)
             
-            // Placeholder for offers
-            VStack(spacing: AppSpacing.md) {
-                Text("No active offers right now")
-                    .font(AppFonts.subheadline)
-                    .foregroundColor(AppColors.secondaryText)
+            if !latestOffers.isEmpty {
+                VStack(spacing: AppSpacing.md) {
+                    ForEach(latestOffers.prefix(2)) { offer in
+                        LatestOfferCard(offer: offer)
+                    }
+                }
+                .padding(.horizontal, AppSpacing.lg)
+            } else {
+                VStack(spacing: AppSpacing.md) {
+                    Text("No active offers right now")
+                        .font(AppFonts.subheadline)
+                        .foregroundColor(AppColors.secondaryText)
+                }
+                .padding(AppSpacing.xl)
+                .frame(maxWidth: .infinity)
+                .background(AppColors.white)
+                .cornerRadius(AppSpacing.cornerRadius)
+                .padding(.horizontal, AppSpacing.lg)
             }
-            .padding(AppSpacing.xl)
-            .frame(maxWidth: .infinity)
-            .background(AppColors.white)
-            .cornerRadius(AppSpacing.cornerRadius)
-            .padding(.horizontal, AppSpacing.lg)
         }
         .padding(.top, AppSpacing.xl)
     }
@@ -355,6 +365,7 @@ struct HomeView: View {
                 self.offerBanners = bannersResult
                 self.loyaltySummary = loyaltyResult
                 self.popularItems = itemsResult.filter { $0.isPopular }
+                self.latestOffers = MockData.latestOffers.filter { $0.isActive }
                 self.isLoading = false
             }
         } catch {
@@ -384,7 +395,7 @@ struct OrderTypeButton: View {
                     .foregroundColor(isSelected ? .white : AppColors.primaryRed)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
             .background(
                 RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
                     .fill(isSelected ? AppColors.primaryRed : AppColors.secondaryBackground)
@@ -409,12 +420,13 @@ struct OfferBannerView: View {
             }
             .ignoresSafeArea()
             
-            VStack(spacing: AppSpacing.md) {
+            VStack(spacing: AppSpacing.sm) {
                 Spacer()
                 
-                VStack(spacing: AppSpacing.sm) {
+                VStack(spacing: AppSpacing.xs) {
                     Text(banner.title)
                         .font(AppFonts.headline)
+                        .fontWeight(.bold)
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
                     
@@ -424,12 +436,6 @@ struct OfferBannerView: View {
                             .foregroundColor(.white.opacity(0.9))
                             .multilineTextAlignment(.center)
                     }
-                    
-                    Text(banner.description)
-                        .font(AppFonts.subheadline)
-                        .foregroundColor(.white.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, AppSpacing.lg)
                 }
                 
                 Spacer()
@@ -437,9 +443,10 @@ struct OfferBannerView: View {
                 Button(action: {}) {
                     Text(banner.callToAction)
                         .font(AppFonts.callout)
+                        .fontWeight(.semibold)
                         .foregroundColor(AppColors.primaryRed)
                         .padding(.horizontal, AppSpacing.xl)
-                        .padding(.vertical, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
                         .background(.white)
                         .cornerRadius(AppSpacing.cornerRadius)
                 }
@@ -467,7 +474,7 @@ struct MenuItemCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .topLeading) {
                 Rectangle()
                     .fill(AppColors.lightGray)
 
@@ -475,14 +482,17 @@ struct MenuItemCard: View {
                     .resizable()
                     .scaledToFill()
 
-                Button(action: { isFavorite.toggle() }) {
-                    Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .font(.system(size: 16))
-                        .foregroundColor(isFavorite ? AppColors.primaryRed : AppColors.white)
-                        .padding(AppSpacing.sm)
-                        .background(Circle().fill(AppColors.shadow))
+                if item.isPopular {
+                    Text("Bestseller")
+                        .font(AppFonts.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, AppSpacing.sm)
+                        .padding(.vertical, AppSpacing.xs)
+                        .background(AppColors.primaryRed)
+                        .cornerRadius(AppSpacing.smallCornerRadius)
+                        .padding(AppSpacing.xs)
                 }
-                .padding(AppSpacing.xs)
             }
             .frame(height: 120)
             .frame(maxWidth: .infinity)
@@ -491,13 +501,9 @@ struct MenuItemCard: View {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(item.name)
                     .font(AppFonts.callout)
+                    .fontWeight(.semibold)
                     .foregroundColor(AppColors.primaryText)
-                    .lineLimit(2)
-                
-                Text(item.description)
-                    .font(AppFonts.caption)
-                    .foregroundColor(AppColors.secondaryText)
-                    .lineLimit(2)
+                    .lineLimit(1)
                 
                 if let calories = item.calories {
                     Text("\(calories) cal")
@@ -505,19 +511,15 @@ struct MenuItemCard: View {
                         .foregroundColor(AppColors.tertiaryText)
                 }
                 
-                HStack {
+                if item.isCustomizable {
+                    Text("₹\(Int(item.basePrice)) starts at")
+                        .font(AppFonts.caption)
+                        .foregroundColor(AppColors.secondaryText)
+                } else {
                     Text("₹\(Int(item.basePrice))")
                         .font(AppFonts.callout)
                         .fontWeight(.semibold)
                         .foregroundColor(AppColors.primaryRed)
-                    
-                    Spacer()
-                    
-                    Button(action: {}) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundColor(AppColors.primaryRed)
-                    }
                 }
             }
         }
@@ -559,6 +561,75 @@ struct ErrorView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppColors.primaryBackground)
+    }
+}
+
+// MARK: - Latest Offer Card
+struct LatestOfferCard: View {
+    let offer: LatestOffer
+    @State private var isCodeCopied: Bool = false
+    
+    var body: some View {
+        VStack(spacing: AppSpacing.md) {
+            HStack {
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Text(offer.title)
+                        .font(AppFonts.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(AppColors.primaryRed)
+                    
+                    Text(offer.description)
+                        .font(AppFonts.subheadline)
+                        .foregroundColor(AppColors.secondaryText)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: AppSpacing.xs) {
+                    Text(offer.timeRemaining)
+                        .font(AppFonts.caption)
+                        .foregroundColor(AppColors.warmOrange)
+                        .fontWeight(.semibold)
+                }
+            }
+            
+            HStack(spacing: AppSpacing.sm) {
+                Button(action: {
+                    // Copy promo code
+                    UIPasteboard.general.string = offer.promoCode
+                    isCodeCopied = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        isCodeCopied = false
+                    }
+                }) {
+                    Text(offer.promoCode)
+                        .font(AppFonts.callout)
+                        .fontWeight(.semibold)
+                        .foregroundColor(isCodeCopied ? .green : AppColors.primaryRed)
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
+                        .background(AppColors.lightGray)
+                        .cornerRadius(AppSpacing.smallCornerRadius)
+                }
+                
+                Button(action: {}) {
+                    Text("Apply Code")
+                        .font(AppFonts.callout)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
+                        .background(AppColors.primaryRed)
+                        .cornerRadius(AppSpacing.smallCornerRadius)
+                }
+                
+                Spacer()
+            }
+        }
+        .padding(AppSpacing.lg)
+        .background(AppColors.white)
+        .cornerRadius(AppSpacing.cornerRadius)
+        .shadow(color: AppColors.shadow, radius: 2, x: 0, y: 1)
     }
 }
 

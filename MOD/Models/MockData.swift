@@ -549,16 +549,31 @@ struct MockData {
             description: "Earn 2X Loyalty Points on your favorite MOD Pizza.",
             backgroundColor: "#8B0000",
             textColor: "#FFFFFF",
-            callToAction: "Order Now"
+            callToAction: "ORDER NOW"
+        )
+    ]
+    
+    // MARK: - Latest Offers
+    static let latestOffers: [LatestOffer] = [
+        LatestOffer(
+            id: "offer1",
+            title: "FLAT 50% OFF",
+            description: "Artisanal Pizzas Feast",
+            discountPercentage: "50%",
+            promoCode: "MODFEAST",
+            endDate: Date().addingTimeInterval(7200),
+            minOrderValue: 299,
+            applicableCategories: ["Pizza"]
         ),
-        OfferBanner(
-            id: "banner2",
-            title: "FREE DRINK",
-            subtitle: "With Any Pizza",
-            description: "Get a free soft drink with any pizza order.",
-            backgroundColor: "#FF6B35",
-            textColor: "#FFFFFF",
-            callToAction: "Claim Offer"
+        LatestOffer(
+            id: "offer2",
+            title: "BOGO TU",
+            description: "Buy 1 Get 1 Free on Tuesdays",
+            discountPercentage: "BOGO",
+            promoCode: "BOGOTU",
+            endDate: Date().addingTimeInterval(86400 * 7),
+            minOrderValue: 399,
+            applicableCategories: ["Pizza"]
         )
     ]
     
