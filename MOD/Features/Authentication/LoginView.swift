@@ -1,346 +1,260 @@
 import SwiftUI
 
+import SwiftUI
+
+// MARK: - Design tokens (swap these for your AppColors if you have equivalents)
+private extension Color {
+    static let modBackground  = Color(red: 0.980, green: 0.973, blue: 0.965) // #FAF8F6
+    static let modRed         = Color(red: 0.651, green: 0.165, blue: 0.165) // #A62A2A
+    static let modText        = Color(red: 0.102, green: 0.102, blue: 0.102) // #1A1A1A
+    static let modBrownText   = Color(red: 0.357, green: 0.290, blue: 0.271) // #5B4A45
+    static let modSkip        = Color(red: 0.478, green: 0.322, blue: 0.000) // #7A5200
+    static let modField       = Color(red: 0.941, green: 0.933, blue: 0.925) // #F0EEEC
+    static let modPlaceholder = Color(red: 0.710, green: 0.690, blue: 0.675) // #B5B0AC
+    static let modDivider     = Color.black.opacity(0.08)
+}
+
 struct LoginView: View {
-    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var appRouter: AppRouter
+    
+    let onLoginComplete: () -> Void
     
     @State private var mobileNumber: String = ""
     @State private var countryCode: String = "+91"
-    @State private var isLoading: Bool = false
-    @State private var errorMessage: String?
-    @State private var showOTPView: Bool = false
     
-    private let authenticationService = AuthenticationService.shared
+    private let countryOptions: [(flag: String, code: String)] = [
+        ("🇮🇳", "+91"),
+        ("🇺🇸", "+1")
+    ]
+    
+    private var selectedFlag: String {
+        countryOptions.first(where: { $0.code == countryCode })?.flag ?? "🌐"
+    }
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                AppColors.primaryBackground
-                    .ignoresSafeArea()
-                
-                VStack(spacing: AppSpacing.xl) {
-                    Spacer()
+        GeometryReader { geo in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    topBar
+                    logo.padding(.top, 8)
+                    header.padding(.top, 24)
+                    phoneCard.padding(.top, 32)
+                    orDivider.padding(.top, 28)
+                    socialButtons.padding(.top, 24)
                     
-                    VStack(spacing: AppSpacing.md) {
-                        Image(systemName: "person.circle.fill")
-                            .font(.system(size: 80))
-                            .foregroundColor(AppColors.primaryRed)
-                        
-                        Text("Welcome Back")
-                            .font(AppFonts.headline)
-                            .foregroundColor(AppColors.primaryText)
-                    }
+                    Spacer(minLength: 32)
                     
-                    Spacer()
-                    
-                    VStack(spacing: AppSpacing.lg) {
-                        VStack(spacing: AppSpacing.sm) {
-                            Text("Mobile Number")
-                                .font(AppFonts.subheadline)
-                                .foregroundColor(AppColors.secondaryText)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            
-                            HStack {
-                                Picker("Country Code", selection: $countryCode) {
-                                    Text("+91").tag("+91")
-                                    Text("+1").tag("+1")
-                                }
-                                .pickerStyle(MenuPickerStyle())
-                                .frame(width: 80)
-                                
-                                Divider()
-                                
-                                TextField("Enter mobile number", text: $mobileNumber)
-                                    .keyboardType(.numberPad)
-                                    .textContentType(.telephoneNumber)
-                            }
-                            .padding(AppSpacing.md)
-                            .background(AppColors.secondaryBackground)
-                            .cornerRadius(AppSpacing.cornerRadius)
-                        }
-                        
-                        if let errorMessage = errorMessage {
-                            Text(errorMessage)
-                                .font(AppFonts.caption)
-                                .foregroundColor(AppColors.error)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        
-                        PrimaryButton(
-                            title: "Continue",
-                            action: sendOTP,
-                            isLoading: isLoading,
-                            isDisabled: !isValidMobileNumber
-                        )
-                        .padding(.top, AppSpacing.md)
-                    }
-                    .padding(.horizontal, AppSpacing.xl)
-                    
-                    Spacer()
-                    
-                    VStack(spacing: AppSpacing.md) {
-                        HStack(spacing: AppSpacing.md) {
-                            Rectangle()
-                                .fill(AppColors.divider)
-                                .frame(height: 1)
-                            
-                            Text("or")
-                                .font(AppFonts.subheadline)
-                                .foregroundColor(AppColors.tertiaryText)
-                            
-                            Rectangle()
-                                .fill(AppColors.divider)
-                                .frame(height: 1)
-                        }
-                        
-                        SecondaryButton(title: "Continue with Apple", action: {})
-                        SecondaryButton(title: "Continue with Google", action: {})
-                    }
-                    .padding(.horizontal, AppSpacing.xl)
-                    
-                    Spacer()
+                    legalText
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, 16)
                 }
+                .padding(.horizontal, 24)
+                .frame(minHeight: geo.size.height)
             }
-            .navigationTitle("Login")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-            .navigationDestination(isPresented: $showOTPView) {
-                OTPVerifyView(mobileNumber: mobileNumber, countryCode: countryCode)
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .background(Color.modBackground.ignoresSafeArea())
+    }
+    
+    // MARK: - Top bar
+    private var topBar: some View {
+        HStack {
+            Spacer()
+            Button(action: onLoginComplete) {
+                Text("Skip for now")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.modSkip)
+                    .frame(height: 44)
+                    .contentShape(Rectangle())
             }
         }
     }
     
-    // MARK: - Validation
-    
-    private var isValidMobileNumber: Bool {
-        mobileNumber.count == 10 && mobileNumber.allSatisfy { $0.isNumber }
-    }
-    
-    // MARK: - Actions
-    
-    private func sendOTP() {
-        isLoading = true
-        errorMessage = nil
-        
-        Task {
-            do {
-                _ = try await authenticationService.sendOTP(
-                    mobileNumber: mobileNumber,
-                    countryCode: countryCode
+    // MARK: - Logo
+    private var logo: some View {
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.modRed)
+                .frame(width: 42, height: 42)
+                .overlay(
+                    Image(systemName: "triangle.fill")
+                        .font(.system(size: 16))
+                        .rotationEffect(.degrees(180))
+                        .foregroundColor(.white)
                 )
-                
-                await MainActor.run {
-                    isLoading = false
-                    showOTPView = true
-                }
-            } catch {
-                await MainActor.run {
-                    isLoading = false
-                    errorMessage = error.localizedDescription
-                }
+            
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("MOD")
+                    .font(.system(size: 20, weight: .heavy))
+                    .foregroundColor(.modRed)
+                Text("PIZZA")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.modText)
             }
         }
+    }
+    
+    // MARK: - Header
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Welcome back")
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(.modText)
+            
+            Text("Handcrafted artisan pizzas, fresh dough, and your personal favorites await.")
+                .font(.system(size: 16))
+                .lineSpacing(4)
+                .foregroundColor(.modBrownText)
+        }
+    }
+    
+    // MARK: - Phone card
+    private var phoneCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Phone number")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.modText)
+            
+            HStack(spacing: 10) {
+                countryMenu
+                
+                TextField(
+                    "",
+                    text: $mobileNumber,
+                    prompt: Text("98765 43210").foregroundColor(.modPlaceholder)
+                )
+                .keyboardType(.numberPad)
+                .textContentType(.telephoneNumber)
+                .font(.system(size: 17))
+                .foregroundColor(.modText)
+                .padding(.horizontal, 16)
+                .frame(height: 52)
+                .background(Color.modField)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            
+            Text("We'll send a 6-digit verification code.")
+                .font(.system(size: 12))
+                .foregroundColor(.modBrownText)
+            
+            Button(action: onLoginComplete) {
+                HStack(spacing: 8) {
+                    Text("Continue")
+                        .font(.system(size: 17, weight: .semibold))
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(Color.modRed)
+                .clipShape(Capsule())
+                .shadow(color: Color.modRed.opacity(0.30), radius: 10, x: 0, y: 6)
+            }
+            .padding(.top, 8)
+        }
+        .padding(20)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Color.black.opacity(0.06), radius: 16, x: 0, y: 6)
+    }
+    
+    private var countryMenu: some View {
+        Menu {
+            ForEach(countryOptions, id: \.code) { option in
+                Button("\(option.flag)  \(option.code)") {
+                    countryCode = option.code
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text(selectedFlag)
+                    .font(.system(size: 18))
+                Text(countryCode)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.modText)
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.modBrownText)
+            }
+            .fixedSize()
+            .padding(.horizontal, 14)
+            .frame(height: 52)
+            .background(Color.modField)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+    }
+    
+    // MARK: - OR divider
+    private var orDivider: some View {
+        HStack(spacing: 12) {
+            Rectangle().fill(Color.modDivider).frame(height: 1)
+            Text("OR")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.modBrownText)
+            Rectangle().fill(Color.modDivider).frame(height: 1)
+        }
+    }
+    
+    // MARK: - Social buttons
+    private var socialButtons: some View {
+        HStack(spacing: 16) {
+            SocialLoginButton(action: {}) {
+                // Replace with Image("google_logo") once you add the asset
+                Text("G")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(Color(red: 0.26, green: 0.52, blue: 0.96))
+            }
+            SocialLoginButton(action: {}) {
+                Image(systemName: "applelogo")
+                    .font(.system(size: 20))
+                    .foregroundColor(.modText)
+            }
+            SocialLoginButton(action: {}) {
+                Image(systemName: "envelope")
+                    .font(.system(size: 18))
+                    .foregroundColor(.modText)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+    
+    // MARK: - Legal
+    private var legalText: some View {
+        (
+            Text("By continuing, you agree to MOD Pizza's ")
+            + Text("Terms").bold().underline().foregroundColor(.modText)
+            + Text(" & ")
+            + Text("Privacy Policy").bold().underline().foregroundColor(.modText)
+            + Text(".")
+        )
+        .font(.system(size: 12))
+        .foregroundColor(.modBrownText)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 8)
     }
 }
 
-// MARK: - OTP Verify View
-struct OTPVerifyView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var appState: AppState
-    @EnvironmentObject var appRouter: AppRouter
-    
-    let mobileNumber: String
-    let countryCode: String
-    
-    @State private var otp: String = ""
-    @State private var isLoading: Bool = false
-    @State private var errorMessage: String?
-    @State private var canResend: Bool = false
-    @State private var resendTimer: Int = 30
-    
-    private let authenticationService = AuthenticationService.shared
+// MARK: - Social button
+struct SocialLoginButton<Content: View>: View {
+    let action: () -> Void
+    @ViewBuilder let content: () -> Content
     
     var body: some View {
-        ZStack {
-            AppColors.primaryBackground
-                .ignoresSafeArea()
-            
-            VStack(spacing: AppSpacing.xl) {
-                Spacer()
-                
-                VStack(spacing: AppSpacing.md) {
-                    Image(systemName: "checkmark.shield.fill")
-                        .font(.system(size: 80))
-                        .foregroundColor(AppColors.primaryRed)
-                    
-                    Text("Verify Your Number")
-                        .font(AppFonts.headline)
-                        .foregroundColor(AppColors.primaryText)
-                    
-                    Text("We sent a 6-digit code to\n\(countryCode) XXXXX \(mobileNumber.suffix(2))")
-                        .font(AppFonts.body)
-                        .foregroundColor(AppColors.secondaryText)
-                        .multilineTextAlignment(.center)
-                }
-                
-                Spacer()
-                
-                VStack(spacing: AppSpacing.lg) {
-                    HStack(spacing: AppSpacing.md) {
-                        ForEach(0..<6, id: \.self) { index in
-                            OTPDigit(index: index, otp: $otp)
-                        }
-                    }
-                    
-                    if let errorMessage = errorMessage {
-                        Text(errorMessage)
-                            .font(AppFonts.caption)
-                            .foregroundColor(AppColors.error)
-                    }
-                    
-                    PrimaryButton(
-                        title: "Verify",
-                        action: verifyOTP,
-                        isLoading: isLoading,
-                        isDisabled: otp.count != 6
-                    )
-                    
-                    HStack(spacing: AppSpacing.sm) {
-                        Text("Didn't receive the code?")
-                            .font(AppFonts.subheadline)
-                            .foregroundColor(AppColors.secondaryText)
-                        
-                        Button(action: resendOTP) {
-                            Text(canResend ? "Resend Code" : "Resend in \(resendTimer)s")
-                                .font(AppFonts.subheadline)
-                                .foregroundColor(canResend ? AppColors.primaryRed : AppColors.tertiaryText)
-                        }
-                        .disabled(!canResend)
-                    }
-                    
-                    Button(action: { dismiss() }) {
-                        Text("Change Number")
-                            .font(AppFonts.subheadline)
-                            .foregroundColor(AppColors.primaryRed)
-                    }
-                }
-                .padding(.horizontal, AppSpacing.xl)
-                
-                Spacer()
-            }
-        }
-        .navigationTitle("Verify OTP")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Cancel") {
-                    dismiss()
-                }
-            }
-        }
-        .onAppear {
-            startResendTimer()
-        }
-    }
-    
-    // MARK: - OTP Digit View
-    
-    struct OTPDigit: View {
-        let index: Int
-        @Binding var otp: String
-        
-        var body: some View {
-            Text(getDigit())
-                .font(AppFonts.title)
-                .fontWeight(.semibold)
-                .foregroundColor(AppColors.primaryText)
-                .frame(width: 50, height: 60)
-                .background(AppColors.secondaryBackground)
-                .cornerRadius(AppSpacing.smallCornerRadius)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppSpacing.smallCornerRadius)
-                        .stroke(AppColors.primaryRed, lineWidth: 2)
-                )
-        }
-        
-        private func getDigit() -> String {
-            if index < otp.count {
-                let stringIndex = otp.index(otp.startIndex, offsetBy: index)
-                return String(otp[stringIndex])
-            }
-            return ""
-        }
-    }
-    
-    // MARK: - Timer
-    
-    private func startResendTimer() {
-        canResend = false
-        resendTimer = 30
-        
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
-            if resendTimer > 0 {
-                resendTimer -= 1
-            } else {
-                canResend = true
-                timer.invalidate()
-            }
-        }
-    }
-    
-    // MARK: - Actions
-    
-    private func verifyOTP() {
-        isLoading = true
-        errorMessage = nil
-        
-        Task {
-            do {
-                _ = try await authenticationService.verifyOTP(
-                    mobileNumber: mobileNumber,
-                    otp: otp
-                )
-                
-                await MainActor.run {
-                    isLoading = false
-                    dismiss()
-                }
-            } catch {
-                await MainActor.run {
-                    isLoading = false
-                    errorMessage = error.localizedDescription
-                }
-            }
-        }
-    }
-    
-    private func resendOTP() {
-        Task {
-            do {
-                _ = try await authenticationService.sendOTP(
-                    mobileNumber: mobileNumber,
-                    countryCode: countryCode
-                )
-                
-                await MainActor.run {
-                    startResendTimer()
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                }
-            }
+        Button(action: action) {
+            Circle()
+                .fill(Color.white)
+                .frame(width: 52, height: 52)
+                .overlay(Circle().stroke(Color.black.opacity(0.08), lineWidth: 1))
+                .overlay(content())
         }
     }
 }
 
 #Preview {
-    LoginView()
+    LoginView(onLoginComplete: {})
+        .environmentObject(AppState.shared)
+        .environmentObject(AppRouter())
 }

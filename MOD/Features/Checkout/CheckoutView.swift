@@ -75,7 +75,11 @@ struct CheckoutView: View {
                 RestaurantPickerView(selectedRestaurant: $cartManager.cart.restaurant)
             }
             .sheet(isPresented: $showLogin) {
-                LoginView()
+                LoginView(onLoginComplete: {
+                    showLogin = false
+                })
+                .environmentObject(appState)
+                .environmentObject(appRouter)
             }
             .alert("Error", isPresented: .constant(errorMessage != nil)) {
                 Button("OK") {
