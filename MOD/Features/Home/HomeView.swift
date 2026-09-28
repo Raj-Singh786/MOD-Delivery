@@ -317,9 +317,10 @@ struct HomeView: View {
                 Button(action: {
                     appRouter.selectTab(.menu)
                 }) {
-                    Text("View All")
-                        .font(AppFonts.subheadline)
-                        .foregroundColor(AppColors.primaryRed)
+                        Text("View All")
+                        .font(.system(size: 15, weight: .semibold))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
                 }
             }
             .padding(.horizontal, AppSpacing.lg)
@@ -620,9 +621,14 @@ struct OfferBannerView: View {
 }
 
 // MARK: - Menu Item Card
+// MARK: - Menu Item Card
 struct MenuItemCard: View {
     let item: MenuItem
     @State private var isFavorite: Bool = false
+
+    private let cardWidth: CGFloat = 220
+    private let imageHeight: CGFloat = 190
+    private let bestsellerColor = Color(hex: "E0913A")
 
     // Use the item's image if it exists in Assets, otherwise fall back to "pizza"
     private var imageName: String {
@@ -633,61 +639,100 @@ struct MenuItemCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            ZStack(alignment: .topLeading) {
-                Rectangle()
-                    .fill(AppColors.lightGray)
+        VStack(alignment: .leading, spacing: 0) {
+            imageSection
+            infoSection
+        }
+        .frame(width: cardWidth)
+        .background(AppColors.white)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+    }
 
+    // MARK: - Image + overlays
+    private var imageSection: some View {
+        // Color.clear + overlay keeps the image from expanding the card's width
+        Color.clear
+            .frame(height: imageHeight)
+            .overlay(
                 Image(imageName)
                     .resizable()
                     .scaledToFill()
-
-                if item.isPopular {
-                    Text("Bestseller")
-                        .font(AppFonts.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, AppSpacing.sm)
-                        .padding(.vertical, AppSpacing.xs)
-                        .background(AppColors.primaryRed)
-                        .cornerRadius(AppSpacing.smallCornerRadius)
-                        .padding(AppSpacing.xs)
+            )
+            .clipped()
+            .overlay(alignment: .topTrailing) {
+                Button(action: { isFavorite.toggle() }) {
+                    Image(systemName: isFavorite ? "heart.fill" : "heart")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(isFavorite ? AppColors.primaryRed : AppColors.primaryText.opacity(0.7))
+                        .frame(width: 40, height: 40)
+                        .background(Circle().fill(Color.white.opacity(0.9)))
                 }
+                .buttonStyle(.plain)
+                .padding(12)
             }
-            .frame(height: 120)
-            .frame(maxWidth: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.smallCornerRadius))
-            
-            VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Text(item.name)
-                    .font(AppFonts.callout)
-                    .fontWeight(.semibold)
-                    .foregroundColor(AppColors.primaryText)
-                    .lineLimit(1)
-                
-                if let calories = item.calories {
-                    Text("\(calories) cal")
-                        .font(AppFonts.caption)
+            .overlay(alignment: .bottomLeading) {
+                HStack(spacing: 8) {
+                    if item.isPopular {
+                        Text("BESTSELLER")
+                            .font(.system(size: 12, weight: .heavy))
+                            .tracking(0.8)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(bestsellerColor))
+                    }
+
+                    if let calories = item.calories {
+                        Text("\(calories) cal")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(Color.black.opacity(0.55)))
+                    }
+                }
+                .padding(12)
+            }
+    }
+
+    // MARK: - Title, description, price
+    private var infoSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(item.name)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(AppColors.primaryText)
+                .lineLimit(1)
+
+            Text(item.description)
+                .font(.system(size: 14))
+                .foregroundColor(AppColors.secondaryText)
+                .lineSpacing(3)
+                .lineLimit(2, reservesSpace: true) // keeps all cards the same height
+
+            Rectangle()
+                .fill(Color.black.opacity(0.06))
+                .frame(height: 1)
+                .padding(.top, 4)
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("₹\(Int(item.basePrice))")
+                    .font(.system(size: 22, weight: .heavy))
+                    .foregroundColor(AppColors.primaryRed)
+
+                if item.isCustomizable {
+                    Text("starts at")
+                        .font(.system(size: 13))
                         .foregroundColor(AppColors.tertiaryText)
                 }
-                
-                if item.isCustomizable {
-                    Text("₹\(Int(item.basePrice)) starts at")
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.secondaryText)
-                } else {
-                    Text("₹\(Int(item.basePrice))")
-                        .font(AppFonts.callout)
-                        .fontWeight(.semibold)
-                        .foregroundColor(AppColors.primaryRed)
-                }
+
+                Spacer()
             }
+            .padding(.top, 2)
         }
-        .frame(width: 140)
-        .padding(AppSpacing.sm)
-        .background(AppColors.white)
-        .cornerRadius(AppSpacing.cornerRadius)
-        .shadow(color: AppColors.shadow, radius: 2, x: 0, y: 1)
+        .padding(.horizontal, 18)
+        .padding(.top, 16)
+        .padding(.bottom, 18)
     }
 }
 
