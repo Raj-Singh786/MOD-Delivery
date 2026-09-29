@@ -1,4 +1,6 @@
 import SwiftUI
+import CoreImage.CIFilterBuiltins
+import Combine
 
 struct RewardsView: View {
     @EnvironmentObject var appState: AppState
@@ -93,13 +95,11 @@ struct RewardsView: View {
             .sheet(isPresented: $showQRCode) {
                 LoyaltyQRView(loyaltyQR: loyaltyQR)
             }
-            .sheet(item: $selectedReward) { reward in
+            .sheet(item: $selectedReward, onDismiss: handlePendingNavigation) { reward in
                 RewardDetailView(
                     reward: reward,
                     loyaltySummary: loyaltySummary,
-                    onRedeem: {
-                        await loadData()
-                    }
+                    onRedeem: { await loadData() }
                 )
             }
         }
@@ -269,6 +269,18 @@ struct RewardsView: View {
                         .padding(.horizontal, AppSpacing.lg)
                 }
             }
+        }
+    }
+    
+    
+    private func handlePendingNavigation() {
+        if let tab = appRouter.pendingTab {
+            appRouter.pendingTab = nil
+            appRouter.selectTab(tab)
+        }
+        if appRouter.pendingCartOpen {
+            appRouter.pendingCartOpen = false
+            appRouter.showCartScreen()
         }
     }
     
@@ -860,7 +872,10 @@ struct LoyaltyQRView: View {
     }
 }
 
-// MARK: - Reward Detail View
+
+
+// MARK: - Reward Detail View (redesigned)
+// Replace the old `struct RewardDetailView` in RewardsView.swift with this one.
 struct RewardDetailView: View {
     let reward: Reward
     let loyaltySummary: LoyaltySummary?
@@ -872,168 +887,356 @@ struct RewardDetailView: View {
     @State private var isRedeeming: Bool = false
     @State private var showCheckoutQR: Bool = false
 
+    // MARK: - Derived values
+    private var currentPoints: Int { loyaltySummary?.availablePoints ?? 0 }
+    private var canRedeem: Bool { currentPoints >= reward.pointsRequired }
+    private var pointsAfter: Int { max(0, currentPoints - reward.pointsRequired) }
+
+    // reward.image is treated as an asset name (NOT an SF Symbol). Falls back to "pizza".
+    private var resolvedImageName: String {
+        if let name = reward.image, !name.isEmpty, UIImage(named: name) != nil {
+            return name
+        }
+        return "pizza"
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: AppSpacing.lg) {
-                // Large reward image at top
-                ZStack {
-                    Rectangle()
-                        .fill(AppColors.lightGray)
-                        .frame(height: 200)
-                        .cornerRadius(AppSpacing.cornerRadius, corners: [.topLeft, .topRight])
-                    
-                    if let imageName = reward.image, !imageName.isEmpty {
-                        Image(systemName: imageName)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 120, height: 120)
-                            .foregroundColor(AppColors.mediumGray)
-                    } else {
-                        Image(systemName: "pizza")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 120, height: 120)
-                            .foregroundColor(AppColors.mediumGray)
-                    }
-                }
-                
-                VStack(spacing: AppSpacing.md) {
-                    // Title and subtitle
-                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text(reward.name)
-                            .font(AppFonts.title)
-                            .foregroundColor(AppColors.primaryText)
-                        
-                        Text(reward.description)
-                            .font(AppFonts.subheadline)
-                            .foregroundColor(AppColors.secondaryText)
-                    }
-                    
-                    // Reward Details Card
-                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("Reward Details")
-                            .font(AppFonts.callout.weight(.semibold))
-                            .foregroundColor(AppColors.primaryText)
-                            .padding(.bottom, 4)
-                        
-                        HStack {
-                            Text("Required Points:")
-                                .font(AppFonts.caption)
-                            Spacer()
-                            Text("\(reward.pointsRequired)")
-                                .font(AppFonts.callout)
-                                .foregroundColor(AppColors.primaryRed)
-                        }
-                        
-                        if let summary = loyaltySummary {
-                            HStack {
-                                Text("Current Points:")
-                                    .font(AppFonts.caption)
-                                Spacer()
-                                Text("\(summary.availablePoints)")
-                                    .font(AppFonts.callout)
-                                    .foregroundColor(AppColors.primaryRed)
-                            }
-                            
-                            if summary.availablePoints >= reward.pointsRequired {
-                                Text("Ready to Redeem")
-                                    .font(AppFonts.caption)
-                                    .foregroundColor(AppColors.success)
-                            } else {
-                                Text("Not enough points")
-                                    .font(AppFonts.caption)
-                                    .foregroundColor(AppColors.error)
-                            }
-                        }
-                        
-                        if let expiry = reward.expiryDate {
-                            HStack {
-                                Text("Expires:")
-                                    .font(AppFonts.caption)
-                                Spacer()
-                                Text(formatDate(expiry))
-                                    .font(AppFonts.caption)
-                            }
-                        }
-                        
-                        if let location = reward.eligibleLocation {
-                            HStack {
-                                Text("Eligible Location:")
-                                    .font(AppFonts.caption)
-                                Spacer()
-                                Text(location)
-                                    .font(AppFonts.caption)
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(AppColors.white)
-                    .cornerRadius(AppSpacing.cornerRadius)
-                    .shadow(color: AppColors.shadow, radius: 2, x: 0, y: 1)
-                    
-                    // Terms & Conditions Card
-                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("Terms & Conditions")
-                            .font(AppFonts.callout.weight(.semibold))
-                            .foregroundColor(AppColors.primaryText)
-                            .padding(.bottom, 4)
-                        
-                        if let terms = reward.termsAndConditions, !terms.isEmpty {
-                            Text(terms)
-                                .font(AppFonts.caption)
-                                .foregroundColor(AppColors.secondaryText)
-                        } else {
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack(alignment: .top, spacing: 6) {
-                                    Text("•")
-                                        .font(AppFonts.caption)
-                                        .foregroundColor(AppColors.secondaryText)
-                                    Text("Valid on qualifying orders only")
-                                        .font(AppFonts.caption)
-                                        .foregroundColor(AppColors.secondaryText)
-                                }
-                                HStack(alignment: .top, spacing: 6) {
-                                    Text("•")
-                                        .font(AppFonts.caption)
-                                        .foregroundColor(AppColors.secondaryText)
-                                    Text("Cannot be combined with selected offers")
-                                        .font(AppFonts.caption)
-                                        .foregroundColor(AppColors.secondaryText)
-                                }
-                                HStack(alignment: .top, spacing: 6) {
-                                    Text("•")
-                                        .font(AppFonts.caption)
-                                        .foregroundColor(AppColors.secondaryText)
-                                    Text("Backend confirms redemption status before use")
-                                        .font(AppFonts.caption)
-                                        .foregroundColor(AppColors.secondaryText)
-                                }
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(AppColors.white)
-                    .cornerRadius(AppSpacing.cornerRadius)
-                    .shadow(color: AppColors.shadow, radius: 2, x: 0, y: 1)
+        ZStack(alignment: .bottom) {
+            AppColors.secondaryBackground.ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: AppSpacing.lg) {
+                    heroImage
+                    titleSection
+                    detailsCard
+                    howToRedeemCard
+                    termsCard
+
+                    Color.clear.frame(height: 150) // room for sticky bottom bar
                 }
                 .padding(.horizontal, AppSpacing.lg)
-                
+                .padding(.top, AppSpacing.xl)
+            }
+
+            bottomBar
+        }
+        .overlay(alignment: .topTrailing) { closeButton }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .sheet(isPresented: $showCheckoutQR) {
+            if let summary = loyaltySummary {
+                EnhancedLoyaltyQRView(
+                    loyaltyQR: LoyaltyQR.mock(from: summary),
+                    reward: reward,
+                    onClose: {
+                        showCheckoutQR = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            dismiss()
+                        }
+                    }                )
+            }
+        }
+    }
+
+    // MARK: - Hero Image
+    private var heroImage: some View {
+        // Color.clear + overlay keeps the photo from stretching the layout
+        Color.clear
+            .frame(height: 230)
+            .overlay(
+                Image(resolvedImageName)
+                    .resizable()
+                    .scaledToFill()
+            )
+            .clipped()
+            .overlay(
+                LinearGradient(
+                    colors: [.clear, Color.black.opacity(0.6)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+            )
+            .overlay(alignment: .topLeading) {
+                HStack(spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 11, weight: .bold))
+                        Text("MOD REWARDS")
+                            .font(.system(size: 13, weight: .heavy))
+                            .tracking(0.6)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(AppColors.primaryRed))
+
+                    Text("\(reward.pointsRequired) Points")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(AppColors.primaryText)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(Capsule().fill(Color.white.opacity(0.95)))
+                }
+                .padding(14)
+            }
+            .overlay(alignment: .bottom) {
+                HStack {
+                    HStack(spacing: 6) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(hex: "F6C244"))
+                        Text("Most Popular Reward")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(Color.black.opacity(0.45)))
+
+                    Spacer()
+
+                    Text("Tier 1 Perk")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(Capsule().fill(Color.black.opacity(0.45)))
+                }
+                .padding(14)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    // MARK: - Close Button
+    private var closeButton: some View {
+        Button(action: { dismiss() }) {
+            Image(systemName: "xmark")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(AppColors.primaryText)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(Color.white.opacity(0.9)))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 26)
+        .padding(.trailing, AppSpacing.lg + 8)
+    }
+
+    // MARK: - Title
+    private var titleSection: some View {
+        VStack(spacing: AppSpacing.sm) {
+            Text(reward.name)
+                .font(.system(size: 30, weight: .heavy))
+                .foregroundColor(AppColors.primaryText)
+                .multilineTextAlignment(.center)
+
+            Text(reward.description)
+                .font(.system(size: 17))
+                .foregroundColor(AppColors.secondaryText)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, AppSpacing.sm)
+    }
+
+    // MARK: - Reward Details Card
+    private var detailsCard: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Reward Details")
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundColor(AppColors.primaryText)
+
                 Spacer()
-                
-                // Redeem Button Area
+
+                if loyaltySummary != nil {
+                    HStack(spacing: 5) {
+                        Image(systemName: canRedeem ? "checkmark" : "xmark")
+                            .font(.system(size: 11, weight: .bold))
+                        Text(canRedeem ? "Ready to Redeem" : "Not enough points")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(canRedeem ? AppColors.success : AppColors.error)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(
+                        Capsule().fill((canRedeem ? AppColors.success : AppColors.error).opacity(0.14))
+                    )
+                }
+            }
+            .padding(.bottom, AppSpacing.md)
+
+            Divider()
+
+            // Required points
+            HStack(spacing: 10) {
+                Image(systemName: "plus.circle.fill")
+                    .foregroundColor(AppColors.primaryRed)
+                Text("Required Points:")
+                    .font(.system(size: 16))
+                    .foregroundColor(AppColors.secondaryText)
+                Spacer()
+                Text("\(reward.pointsRequired)")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(AppColors.primaryRed)
+            }
+            .padding(.vertical, AppSpacing.md)
+
+            Divider()
+
+            // Current balance
+            HStack(alignment: .top) {
+                Text("Current Balance:")
+                    .font(.system(size: 16))
+                    .foregroundColor(AppColors.secondaryText)
+                Spacer()
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(currentPoints.formatted())
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(AppColors.primaryText)
+                    if canRedeem {
+                        Text("\(pointsAfter.formatted()) pts remaining after")
+                            .font(.system(size: 12))
+                            .foregroundColor(AppColors.tertiaryText)
+                    }
+                }
+            }
+            .padding(.vertical, AppSpacing.md)
+
+            if let location = reward.eligibleLocation {
+                Divider()
+
+                HStack(spacing: 10) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .foregroundColor(AppColors.secondaryText)
+                    Text("Eligible Location:")
+                        .font(.system(size: 16))
+                        .foregroundColor(AppColors.secondaryText)
+                    Spacer()
+                    Text(location)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(AppColors.primaryText)
+                        .multilineTextAlignment(.trailing)
+                }
+                .padding(.top, AppSpacing.md)
+            }
+
+            if let expiry = reward.expiryDate {
+                Divider().padding(.top, AppSpacing.md)
+
+                HStack(spacing: 10) {
+                    Image(systemName: "calendar")
+                        .foregroundColor(AppColors.secondaryText)
+                    Text("Expires:")
+                        .font(.system(size: 16))
+                        .foregroundColor(AppColors.secondaryText)
+                    Spacer()
+                    Text(formatDate(expiry))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(AppColors.primaryText)
+                }
+                .padding(.top, AppSpacing.md)
+            }
+        }
+        .padding(AppSpacing.lg)
+        .modifier(DetailCardStyle())
+    }
+
+    // MARK: - How To Redeem
+    private var howToRedeemCard: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            Text("HOW TO REDEEM")
+                .font(.system(size: 14, weight: .bold))
+                .tracking(0.8)
+                .foregroundColor(AppColors.secondaryText)
+
+            stepRow(number: 1,
+                    text: Text("Tap ") + Text("Redeem").bold().foregroundColor(AppColors.primaryRed) + Text(" below to activate your reward"))
+            stepRow(number: 2,
+                    text: Text("Show your QR code to the cashier at checkout"))
+            stepRow(number: 3,
+                    text: Text("Enjoy your reward!"))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(AppSpacing.lg)
+        .modifier(DetailCardStyle())
+    }
+
+    private func stepRow(number: Int, text: Text) -> some View {
+        HStack(alignment: .top, spacing: AppSpacing.md) {
+            Text("\(number)")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(AppColors.primaryRed)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(AppColors.primaryRed.opacity(0.1)))
+
+            text
+                .font(.system(size: 16))
+                .foregroundColor(AppColors.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 5)
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    // MARK: - Terms & Conditions
+    private var termsCard: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            Text("Terms & Conditions")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundColor(AppColors.primaryText)
+
+            if let terms = reward.termsAndConditions, !terms.isEmpty {
+                Text(terms)
+                    .font(.system(size: 14))
+                    .foregroundColor(AppColors.secondaryText)
+            } else {
+                ForEach([
+                    "Valid on qualifying orders only",
+                    "Cannot be combined with selected offers",
+                    "Backend confirms redemption status before use"
+                ], id: \.self) { line in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("•")
+                        Text(line)
+                    }
+                    .font(.system(size: 14))
+                    .foregroundColor(AppColors.secondaryText)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(AppSpacing.lg)
+        .modifier(DetailCardStyle())
+    }
+
+    // MARK: - Sticky Bottom Bar
+    private var bottomBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+
+            VStack(spacing: AppSpacing.md) {
                 if !redeemed {
                     Button(action: { showConfirm = true }) {
-                        Text("Redeem for \(reward.pointsRequired) Points")
-                            .font(AppFonts.subheadline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background((loyaltySummary?.availablePoints ?? 0) >= reward.pointsRequired ? AppColors.primaryRed : AppColors.lightGray)
-                            .cornerRadius(AppSpacing.cornerRadius)
+                        HStack(spacing: 10) {
+                            Text("Redeem for \(reward.pointsRequired) Points")
+                                .font(.system(size: 18, weight: .bold))
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 16, weight: .bold))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(canRedeem ? AppColors.primaryRed : AppColors.lightGray)
+                        )
+                        .shadow(color: canRedeem ? AppColors.primaryRed.opacity(0.35) : .clear,
+                                radius: 12, x: 0, y: 6)
                     }
-                    .disabled((loyaltySummary?.availablePoints ?? 0) < reward.pointsRequired || isRedeeming)
-                    .padding(.horizontal, AppSpacing.lg)
-                    .padding(.bottom, AppSpacing.lg)
+                    .buttonStyle(.plain)
+                    .disabled(!canRedeem || isRedeeming)
                     .confirmationDialog("Confirm Redemption", isPresented: $showConfirm, titleVisibility: .visible) {
                         Button("Confirm", role: .destructive) {
                             isRedeeming = true
@@ -1045,43 +1248,58 @@ struct RewardDetailView: View {
                         }
                         Button("Cancel", role: .cancel) {}
                     }
-                } else {
-                    VStack(spacing: AppSpacing.md) {
-                        Text("Reward Ready!")
-                            .font(AppFonts.title)
-                            .foregroundColor(AppColors.success)
-                        
-                        Button(action: {
-                            showCheckoutQR = true
-                        }) {
-                            Text("Show at Checkout")
-                                .font(AppFonts.subheadline)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(AppColors.primaryRed)
-                                .cornerRadius(AppSpacing.cornerRadius)
-                        }
+
+                    Button(action: { dismiss() }) {
+                        Text("Save for Later")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(AppColors.secondaryText)
                     }
-                    .padding(.horizontal, AppSpacing.lg)
-                    .padding(.bottom, AppSpacing.lg)
+                    .buttonStyle(.plain)
+                } else {
+                    Text("Reward Ready!")
+                        .font(.system(size: 22, weight: .heavy))
+                        .foregroundColor(AppColors.success)
+
+                    Button(action: { showCheckoutQR = true }) {
+                        Text("Show at Checkout")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .fill(AppColors.primaryRed)
+                            )
+                            .shadow(color: AppColors.primaryRed.opacity(0.35), radius: 12, x: 0, y: 6)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.top, AppSpacing.md)
+            .padding(.bottom, AppSpacing.lg)
         }
-        .background(AppColors.secondaryBackground)
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
-        .sheet(isPresented: $showCheckoutQR) {
-            if let summary = loyaltySummary {
-                EnhancedLoyaltyQRView(loyaltyQR: LoyaltyQR.mock(from: summary), reward: reward)
-            }
-        }
+        .background(AppColors.white.ignoresSafeArea(edges: .bottom))
     }
-    
-    func formatDate(_ date: Date) -> String {
+
+    // MARK: - Helpers
+    private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Shared card style for the detail sheet
+private struct DetailCardStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(AppColors.white)
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+            )
     }
 }
 
@@ -1106,113 +1324,459 @@ fileprivate struct RoundedCorner: Shape {
     }
 }
 
-// MARK: - Enhanced Loyalty QR View
+
+
+// MARK: - Reward Redemption Confirmation
+// Replaces the old `EnhancedLoyaltyQRView` in RewardsView.swift (delete the old struct).
+// The init stays `EnhancedLoyaltyQRView(loyaltyQR:reward:)`, `onClose` is optional.
 struct EnhancedLoyaltyQRView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var appRouter: AppRouter
+    @EnvironmentObject var cartManager: CartManager
+
     let loyaltyQR: LoyaltyQR?
     let reward: Reward
-    
-    @State private var timeRemaining: TimeInterval = 0
-    @State private var timer: Timer?
-    
+    /// Called to close the whole redemption flow (this sheet + the reward detail sheet).
+    var onClose: () -> Void = {}
+
+    @State private var voucherCode: String = EnhancedLoyaltyQRView.makeVoucherCode()
+    @State private var expiresAt: Date = Date().addingTimeInterval(15 * 60)
+    @State private var now: Date = Date()
+    @State private var isApplied: Bool = false
+    @State private var isCodeCopied: Bool = false
+    @State private var showDetails: Bool = true
+
+    private let redeemedAt = Date()
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private let brown = Color(hex: "7A4E1D")
+
+    // MARK: - Derived values
+
+    private var secondsRemaining: Int { max(0, Int(expiresAt.timeIntervalSince(now))) }
+    private var isExpired: Bool { secondsRemaining == 0 }
+    private var currentPoints: Int { loyaltyQR?.currentPoints ?? 0 }
+    private var balanceAfter: Int { max(0, currentPoints - reward.pointsRequired) }
+
+    // ADAPT: change to your CartManager's item-count property if it's named differently
+    private var bagCount: Int { cartManager.cart.items.count }
+
+    // Free drink item that gets added to the bag (looks in your mock menu)
+    private var freeDrinkItem: MenuItem? {
+        MockData.menuItems.first {
+            $0.name.localizedCaseInsensitiveContains("drink") ||
+            $0.name.localizedCaseInsensitiveContains("soda") ||
+            $0.name.localizedCaseInsensitiveContains("tea")
+        }
+    }
+
+    private var resolvedImageName: String {
+        if let name = reward.image, !name.isEmpty, UIImage(named: name) != nil { return name }
+        return "pizza"
+    }
+
+    private var timerText: String {
+        isExpired ? "Expired" : String(format: "%02d:%02d", secondsRemaining / 60, secondsRemaining % 60)
+    }
+
+    // MARK: - Body
+
     var body: some View {
-        VStack(spacing: AppSpacing.lg) {
+        VStack(spacing: 0) {
+            header
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: AppSpacing.lg) {
+                    successHeader
+                    voucherCard
+                    actionButtons
+                    infoBox
+                    voucherDetailsCard
+                    footerLinks
+
+                    Color.clear.frame(height: AppSpacing.lg)
+                }
+                .padding(.horizontal, AppSpacing.lg)
+                .padding(.top, AppSpacing.md)
+            }
+        }
+        .background(AppColors.secondaryBackground.ignoresSafeArea())
+        .onReceive(ticker) { now = $0 }
+        .presentationDetents([.large])
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack {
+            Button(action: closeFlow) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(AppColors.secondaryText)
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain)
+
+            Text("Reward Redemption Confirmation")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundColor(AppColors.secondaryText)
+                .lineLimit(2)
+                .padding(.leading, 4)
+
             Spacer()
-            
+
+            Image(systemName: "person.fill")
+                .font(.system(size: 14))
+                .foregroundColor(.white)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(AppColors.primaryRed.opacity(0.8)))
+        }
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.top, AppSpacing.lg)
+        .padding(.bottom, AppSpacing.sm)
+    }
+
+    // MARK: - Success Header
+
+    private var successHeader: some View {
+        VStack(spacing: AppSpacing.md) {
             ZStack {
-                Rectangle()
-                    .fill(AppColors.white)
-                    .frame(width: 280, height: 280)
-                    .cornerRadius(AppSpacing.cornerRadius)
-                    .shadow(color: AppColors.shadow, radius: 12, x: 0, y: 6)
-                
-                if loyaltyQR != nil {
-                    VStack(spacing: AppSpacing.md) {
-                        Image(systemName: "qrcode")
-                            .font(.system(size: 180))
-                            .foregroundColor(AppColors.primaryRed)
-                        
-                        VStack(spacing: AppSpacing.xs) {
-                            Text(loyaltyQR?.customerName ?? "Member Name")
-                                .font(AppFonts.title)
-                                .foregroundColor(AppColors.primaryText)
-                            
-                            Text("Member ID: \(loyaltyQR?.rewardId ?? "123456789")")
-                                .font(AppFonts.caption)
-                                .foregroundColor(AppColors.secondaryText)
+                Circle().fill(brown.opacity(0.15)).frame(width: 76, height: 76)
+                Circle().fill(brown).frame(width: 50, height: 50)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.white)
+            }
+
+            HStack(spacing: 6) {
+                Circle().fill(brown).frame(width: 7, height: 7)
+                Text("REWARD ACTIVATED")
+                    .font(.system(size: 12, weight: .heavy))
+                    .tracking(0.5)
+                    .foregroundColor(brown)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(Color(hex: "F8DDBB")))
+
+            Text("You redeemed \(reward.name)")
+                .font(.system(size: 28, weight: .heavy))
+                .foregroundColor(AppColors.primaryText)
+                .multilineTextAlignment(.center)
+
+            HStack(spacing: 10) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(AppColors.primaryRed.opacity(0.7))
+                Text("-\(reward.pointsRequired) pts deducted")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("|").foregroundColor(AppColors.tertiaryText)
+                Text("Bal: ").font(.system(size: 14)) +
+                Text("\(balanceAfter.formatted()) pts").font(.system(size: 14, weight: .bold))
+            }
+            .foregroundColor(AppColors.primaryText)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(Color.black.opacity(0.06)))
+        }
+    }
+
+    // MARK: - Voucher Card
+
+    private var voucherCard: some View {
+        VStack(spacing: 0) {
+            // Top: item + timer
+            HStack(spacing: AppSpacing.md) {
+                Color.clear
+                    .frame(width: 68, height: 68)
+                    .overlay(Image(resolvedImageName).resizable().scaledToFill())
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text("PERK UNLOCKED")
+                            .font(.system(size: 11, weight: .heavy))
+                            .tracking(0.4)
+                            .foregroundColor(brown)
+
+                        Spacer()
+
+                        HStack(spacing: 5) {
+                            Circle().fill(AppColors.primaryRed).frame(width: 6, height: 6)
+                            Text(timerText)
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                .foregroundColor(AppColors.primaryRed)
                         }
-                        
-                        Text("\(loyaltyQR?.currentPoints ?? 0) Points")
-                            .font(AppFonts.callout)
-                            .foregroundColor(AppColors.primaryRed)
-                        
-                        Text("Reward: \(reward.name)")
-                            .font(AppFonts.subheadline)
-                            .foregroundColor(AppColors.primaryText)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(AppColors.primaryRed.opacity(0.12)))
                     }
-                    .padding(.top, AppSpacing.md)
+
+                    Text(reward.name)
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundColor(AppColors.primaryText)
+                        .lineLimit(1)
+
+                    Text(reward.description)
+                        .font(.system(size: 13))
+                        .foregroundColor(AppColors.secondaryText)
+                        .lineLimit(2)
                 }
             }
-            
-            if loyaltyQR != nil {
-                Text("Expires in \(Int(timeRemaining))s")
-                    .font(AppFonts.caption)
-                    .foregroundColor(AppColors.warning)
-            }
-            
-            Spacer()
-            
-            Button(action: {
-                // Refresh QR code action
-                refreshQR()
-            }) {
-                Text("Refresh QR")
-                    .font(AppFonts.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(AppColors.primaryRed)
-                    .cornerRadius(AppSpacing.cornerRadius)
+            .padding(AppSpacing.lg)
+
+            // Dashed tear line with notches
+            ZStack {
+                DashedLine()
+                    .stroke(AppColors.primaryRed.opacity(0.35),
+                            style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                    .frame(height: 1)
                     .padding(.horizontal, AppSpacing.lg)
+
+                HStack {
+                    Circle().fill(AppColors.secondaryBackground).frame(width: 22, height: 22).offset(x: -11)
+                    Spacer()
+                    Circle().fill(AppColors.secondaryBackground).frame(width: 22, height: 22).offset(x: 11)
+                }
             }
-            
-            Button(action: {
-                dismiss()
-            }) {
-                Text("Done")
-                    .font(AppFonts.subheadline)
-                    .foregroundColor(AppColors.primaryRed)
-                    .padding(.top, AppSpacing.sm)
+
+            // Barcode + code
+            VStack(spacing: AppSpacing.md) {
+                VStack(spacing: AppSpacing.md) {
+                    if let barcode = Self.barcodeImage(for: voucherCode) {
+                        Image(uiImage: barcode)
+                            .resizable()
+                            .interpolation(.none)
+                            .frame(height: 64)
+                            .padding(AppSpacing.md)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.white)
+                    }
+
+                    HStack(spacing: 12) {
+                        Text(voucherCode)
+                            .font(.system(size: 22, weight: .bold, design: .monospaced))
+                            .tracking(2)
+                            .foregroundColor(AppColors.primaryText)
+                            .minimumScaleFactor(0.7)
+                            .lineLimit(1)
+
+                        Button(action: copyCode) {
+                            Image(systemName: isCodeCopied ? "checkmark" : "doc.on.doc")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(isCodeCopied ? AppColors.success : AppColors.secondaryText)
+                                .frame(width: 34, height: 34)
+                                .background(Circle().fill(Color.black.opacity(0.08)))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(AppSpacing.lg)
+                .frame(maxWidth: .infinity)
+                .background(Color.black.opacity(0.05))
+                .opacity(isExpired ? 0.4 : 1)
+
+                Text("Scan barcode at checkout or show code to the squad member at register or drive-thru window.")
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, AppSpacing.sm)
+            }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.bottom, AppSpacing.lg)
+        }
+        .background(AppColors.white)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 6)
+    }
+
+    // MARK: - Action Buttons
+
+    private var actionButtons: some View {
+        Button(action: applyToBag) {
+            HStack(spacing: 10) {
+                Image(systemName: isApplied ? "checkmark.circle.fill" : "bag")
+                    .font(.system(size: 16, weight: .semibold))
+                Text(isApplied ? "Applied to Bag" : "Apply to Current Bag")
+                    .font(.system(size: 17, weight: .bold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(
+                Capsule().fill(isExpired ? AppColors.lightGray : AppColors.primaryRed)
+            )
+            .shadow(color: isExpired ? .clear : AppColors.primaryRed.opacity(0.3),
+                    radius: 10, x: 0, y: 5)
+        }
+        .buttonStyle(.plain)
+        .disabled(isExpired || isApplied)
+    }
+
+    // MARK: - Info Box
+
+    private var infoBox: some View {
+        HStack(alignment: .top, spacing: AppSpacing.md) {
+            Image(systemName: "storefront")
+                .font(.system(size: 15))
+                .foregroundColor(brown)
+                .frame(width: 36, height: 36)
+                .background(Circle().fill(brown.opacity(0.12)))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Dining In or Drive-Thru?")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(AppColors.primaryText)
+
+                Text("Cashier will scan the ticket barcode above or enter your alphanumeric code directly into POS.")
+                    .font(.system(size: 13))
+                    .foregroundColor(AppColors.secondaryText)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(AppSpacing.md)
+        .background(Color.black.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+
+    // MARK: - Voucher Details
+
+    private var voucherDetailsCard: some View {
+        VStack(spacing: 0) {
+            Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showDetails.toggle() } }) {
+                HStack {
+                    Text("Voucher Details")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(AppColors.primaryText)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(AppColors.primaryText)
+                        .rotationEffect(.degrees(showDetails ? 0 : -90))
+                }
+            }
+            .buttonStyle(.plain)
+
+            if showDetails {
+                VStack(spacing: AppSpacing.lg) {
+                    detailRow("Reward Item", reward.name)
+                    detailRow("Redeemed At", "Today, \(redeemedAt.formatted(date: .omitted, time: .shortened))")
+                    detailRow("Applicable Stores", reward.eligibleLocation ?? "All participating MOD locations")
+                    detailRow("Terms", "Single use. Max 1 per order")
+                }
+                .padding(.top, AppSpacing.lg)
+                .transition(.opacity)
             }
         }
         .padding(AppSpacing.lg)
-        .background(AppColors.secondaryBackground)
-        .onAppear {
-            setupTimer()
-        }
-        .onDisappear {
-            timer?.invalidate()
+        .background(AppColors.white)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+
+    private func detailRow(_ title: String, _ value: String) -> some View {
+        HStack(alignment: .top) {
+            Text(title)
+                .font(.system(size: 15))
+                .foregroundColor(AppColors.secondaryText)
+            Spacer(minLength: AppSpacing.md)
+            Text(value)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(AppColors.primaryText)
+                .multilineTextAlignment(.trailing)
         }
     }
-    
-    private func setupTimer() {
-        if let expiresAt = loyaltyQR?.expiresAt {
-            timeRemaining = max(0, expiresAt.timeIntervalSince(Date()))
-            timer?.invalidate()
-            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { t in
-                if timeRemaining > 0 {
-                    timeRemaining -= 1
-                } else {
-                    t.invalidate()
-                }
+
+    // MARK: - Footer
+
+    private var footerLinks: some View {
+        HStack {
+            Button(action: backToMenu) {
+                Text("Back to Menu")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(AppColors.primaryRed)
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.plain)
+
+            Button(action: goToBag) {
+                Text("View Current Bag (\(bagCount))")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(brown)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.top, AppSpacing.sm)
+    }
+
+    // MARK: - Actions / Navigation
+
+    private func copyCode() {
+        UIPasteboard.general.string = voucherCode
+        isCodeCopied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { isCodeCopied = false }
+    }
+
+    /// Adds the free drink to the cart, then closes the sheets and opens the bag.
+    private func applyToBag() {
+        guard !isExpired, !isApplied else { return }
+
+        if let item = freeDrinkItem {
+            // NOTE: make sure this line is priced at ₹0 (see the note in the chat)
+            cartManager.addItem(CartItem(menuItem: item, quantity: 1))
+        }
+
+        isApplied = true
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+
+        // Brief pause so the "Applied to Bag" state is visible, then go to the bag
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            goToBag()
         }
     }
-    
-    private func refreshQR() {
-        // Implement refresh logic if available
-        // For now, reset timer to a default value (e.g. 60 seconds)
-        timeRemaining = 60
+
+    private func goToBag() {
+        appRouter.pendingCartOpen = true
+        closeFlow()
+    }
+
+    private func backToMenu() {
+        appRouter.pendingTab = .menu
+        closeFlow()
+    }
+
+    private func closeFlow() {
+        onClose()                       // the parent closes both sheets
+    }
+
+    // MARK: - Static helpers
+
+    private static func makeVoucherCode() -> String {
+        let chars = Array("ABCDEFGHJKLMNPQRSTUVWXYZ23456789")
+        let suffix = String((0..<4).map { _ in chars.randomElement()! })
+        return "MOD-DRK-\(suffix)"
+    }
+
+    private static func barcodeImage(for code: String) -> UIImage? {
+        let filter = CIFilter.code128BarcodeGenerator()
+        filter.message = Data(code.utf8)
+        filter.quietSpace = 0
+        guard let output = filter.outputImage?.transformed(by: CGAffineTransform(scaleX: 3, y: 3)),
+              let cgImage = CIContext().createCGImage(output, from: output.extent)
+        else { return nil }
+        return UIImage(cgImage: cgImage)
+    }
+}
+
+// MARK: - Dashed line shape
+private struct DashedLine: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return path
     }
 }
 

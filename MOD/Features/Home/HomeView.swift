@@ -1,5 +1,48 @@
 import SwiftUI
 
+// MARK: - Quick Action Model
+enum QuickAction: CaseIterable, Identifiable {
+    case deals, rewards, trackOrder, reorder
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .deals:      return "Deals"
+        case .rewards:    return "Rewards"
+        case .trackOrder: return "Track Order"
+        case .reorder:    return "Reorder"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .deals:      return "tag.fill"
+        case .rewards:    return "gift.fill"
+        case .trackOrder: return "map.fill"
+        case .reorder:    return "arrow.clockwise.circle.fill"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .deals:      return Color(hex: "E2693A")
+        case .rewards:    return Color(hex: "2F7D4A")
+        case .trackOrder: return Color(hex: "3B82F6")
+        case .reorder:    return Color(hex: "C23FD6")
+        }
+    }
+
+    var tileBackground: Color {
+        switch self {
+        case .deals:      return Color(hex: "F7E3D0")
+        case .rewards:    return Color(hex: "E1E8D0")
+        case .trackOrder: return Color(hex: "DDE6E8")
+        case .reorder:    return Color(hex: "F5DCE6")
+        }
+    }
+}
+
 struct HomeView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var appRouter: AppRouter
@@ -42,6 +85,9 @@ struct HomeView: View {
                             
                             // Offer Banners
                             offerBannersSection
+                            
+                            // Quick Actions (NEW)
+                            quickActionsSection
                             
                             // Loyalty Summary
                             loyaltySummarySection
@@ -235,6 +281,44 @@ struct HomeView: View {
         .padding(.top, AppSpacing.md)
     }
     
+    // MARK: - Quick Actions Section (NEW)
+    
+    private var quickActionsSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.lg) {
+            Text("Quick Actions")
+                .font(.system(size: 26, weight: .bold))
+                .foregroundColor(AppColors.primaryText)
+                .padding(.horizontal, AppSpacing.lg)
+            
+            HStack(alignment: .top, spacing: AppSpacing.sm) {
+                ForEach(QuickAction.allCases) { action in
+                    HomeQuickActionTile(action: action) {
+                        handleQuickAction(action)
+                    }
+                }
+            }
+            .padding(.horizontal, AppSpacing.lg)
+        }
+        .padding(.top, AppSpacing.xl)
+    }
+    
+    private func handleQuickAction(_ action: QuickAction) {
+        switch action {
+        case .deals:
+            appRouter.selectTab(.rewards)
+        case .rewards:
+            appRouter.selectTab(.rewards)
+        case .trackOrder:
+            // TODO: connect to your order tracking screen,
+            // e.g. appRouter.showOrderTrackingScreen()
+            break
+        case .reorder:
+            // TODO: connect to your past orders screen / reorder flow,
+            // e.g. appRouter.showOrderHistoryScreen()
+            break
+        }
+    }
+    
     // MARK: - Loyalty Summary Section
     
     private var loyaltySummarySection: some View {
@@ -300,7 +384,7 @@ struct HomeView: View {
                 .padding(.horizontal, AppSpacing.lg)
             }
         }
-        .padding(.top, AppSpacing.md)
+        .padding(.top, AppSpacing.xl)
     }
     
     // MARK: - Popular Items Section
@@ -336,8 +420,6 @@ struct HomeView: View {
         }
         .padding(.top, AppSpacing.xl)
     }
-    
-    // MARK: - Active Offers Section
     
     // MARK: - Active Offers Section
 
@@ -424,6 +506,47 @@ struct HomeView: View {
     }
 }
 
+// MARK: - Quick Action Button (NEW)
+// MARK: - Home Quick Action Tile
+struct HomeQuickActionTile: View {
+    let action: QuickAction
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 12) {
+                Image(systemName: action.icon)
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundColor(action.tint)
+                    .frame(width: 72, height: 72)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(action.tileBackground)
+                    )
+
+                Text(action.title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(AppColors.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(QuickActionPressStyle())
+        .accessibilityLabel(action.title)
+    }
+}
+
+// Subtle press animation for the tiles
+struct QuickActionPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
 // MARK: - Order Type Button
 struct OrderTypeButton: View {
     let orderType: OrderType
@@ -479,61 +602,6 @@ struct OrderTypeButton: View {
 }
 
 // MARK: - Offer Banner View
-//struct OfferBannerView: View {
-//    let banner: OfferBanner
-//    
-//    var body: some View {
-//        ZStack {
-//            // Background color from banner or default
-//            Group {
-//                if let backgroundColor = banner.backgroundColor {
-//                    Color(hex: backgroundColor)
-//                } else {
-//                    AppColors.primaryRed
-//                }
-//            }
-//            .ignoresSafeArea()
-//            
-//            VStack(spacing: AppSpacing.sm) {
-//                Spacer()
-//                
-//                VStack(spacing: AppSpacing.xs) {
-//                    Text(banner.title)
-//                        .font(AppFonts.headline)
-//                        .fontWeight(.bold)
-//                        .foregroundColor(.white)
-//                        .multilineTextAlignment(.center)
-//                    
-//                    if !banner.subtitle.isEmpty {
-//                        Text(banner.subtitle)
-//                            .font(AppFonts.title)
-//                            .foregroundColor(.white.opacity(0.9))
-//                            .multilineTextAlignment(.center)
-//                    }
-//                }
-//                
-//                Spacer()
-//                
-//                Button(action: {}) {
-//                    Text(banner.callToAction)
-//                        .font(AppFonts.callout)
-//                        .fontWeight(.semibold)
-//                        .foregroundColor(AppColors.primaryRed)
-//                        .padding(.horizontal, AppSpacing.xl)
-//                        .padding(.vertical, AppSpacing.sm)
-//                        .background(.white)
-//                        .cornerRadius(AppSpacing.cornerRadius)
-//                }
-//                
-//                Spacer()
-//            }
-//            .padding(AppSpacing.lg)
-//        }
-//        .cornerRadius(AppSpacing.cornerRadius)
-//    }
-//}
-
-
 struct OfferBannerView: View {
     let banner: OfferBanner
 
@@ -572,7 +640,6 @@ struct OfferBannerView: View {
                         .foregroundColor(.white.opacity(0.9))
                         .multilineTextAlignment(.center)
                 }
-            
 
                 Spacer()
 
@@ -620,7 +687,6 @@ struct OfferBannerView: View {
     }
 }
 
-// MARK: - Menu Item Card
 // MARK: - Menu Item Card
 struct MenuItemCard: View {
     let item: MenuItem
@@ -769,7 +835,6 @@ struct ErrorView: View {
     }
 }
 
-// MARK: - Latest Offer Card
 // MARK: - Latest Offer Card
 
 enum OfferCardStyle {

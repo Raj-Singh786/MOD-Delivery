@@ -83,38 +83,23 @@ struct PizzaBuilderView: View {
         }
     }
     
-    // MARK: - Pizza Preview Section
     
+    // MARK: - Pizza Preview Section
+
     private var pizzaPreviewSection: some View {
         VStack(spacing: AppSpacing.md) {
-            ZStack {
-                Circle()
-                    .fill(AppColors.lightGray)
-                    .frame(width: 200, height: 200)
-                
-                // Pizza visual representation
-                Circle()
-                    .stroke(AppColors.primaryRed, lineWidth: 4)
-                    .frame(width: 180, height: 180)
-                
-                // Add visual toppings based on configuration
-                if !configuration.cheese.isEmpty {
-                    ForEach(0..<min(configuration.cheese.count, 5), id: \.self) { index in
-                        Circle()
-                            .fill(AppColors.warmOrange)
-                            .frame(width: 20, height: 20)
-                            .position(
-                                x: 100 + CGFloat(index * 30 - 60),
-                                y: 100 + CGFloat(index * 20 - 40)
-                            )
-                    }
-                }
-                
-                Text("\(configuration.totalCalories) Cals")
-                    .font(AppFonts.caption)
-                    .foregroundColor(AppColors.secondaryText)
-                    .offset(y: 120)
-            }
+            MenuItemImage(imageName: menuItem.image)
+                .frame(width: 200, height: 200)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(AppColors.primaryRed, lineWidth: 4)
+                )
+                .shadow(color: AppColors.shadow, radius: 6, x: 0, y: 3)
+            
+            Text("\(configuration.totalCalories) Cals")
+                .font(AppFonts.caption)
+                .foregroundColor(AppColors.secondaryText)
             
             Text("40+ Toppings • 8 Finishing Sauces • Unlimited Creativity")
                 .font(AppFonts.subheadline)
@@ -604,30 +589,31 @@ struct IngredientRow: View {
     let onToggle: () -> Void
     
     var body: some View {
-        HStack {
-            // Selection
-            Button(action: onToggle) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 24))
-                    .foregroundColor(isSelected ? AppColors.primaryRed : AppColors.tertiaryText)
-            }
-            
-            // Ingredient details
-            VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Text(ingredient.name)
-                    .font(AppFonts.callout)
-                    .foregroundColor(AppColors.primaryText)
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack(spacing: AppSpacing.md) {
+                IngredientImage(ingredient: ingredient)
                 
-                if let calories = ingredient.calories {
-                    Text("\(calories) Cals")
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.tertiaryText)
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Text(ingredient.name)
+                        .font(AppFonts.callout)
+                        .foregroundColor(AppColors.primaryText)
+                    
+                    if let calories = ingredient.calories {
+                        Text("\(calories) Cals")
+                            .font(AppFonts.caption)
+                            .foregroundColor(AppColors.tertiaryText)
+                    }
+                }
+                
+                Spacer()
+                
+                Button(action: onToggle) {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 24))
+                        .foregroundColor(isSelected ? AppColors.primaryRed : AppColors.tertiaryText)
                 }
             }
             
-            Spacer()
-            
-            // Quantity selector
             if isSelected {
                 HStack(spacing: AppSpacing.xs) {
                     ForEach(IngredientQuantity.allCases, id: \.self) { qty in
@@ -679,18 +665,20 @@ struct FinishingSauceRow: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            HStack {
-                Button(action: onToggle) {
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 24))
-                        .foregroundColor(isSelected ? AppColors.primaryRed : AppColors.tertiaryText)
-                }
+            HStack(spacing: AppSpacing.md) {
+                IngredientImage(ingredient: ingredient)
                 
                 Text(ingredient.name)
                     .font(AppFonts.callout)
                     .foregroundColor(AppColors.primaryText)
                 
                 Spacer()
+                
+                Button(action: onToggle) {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 24))
+                        .foregroundColor(isSelected ? AppColors.primaryRed : AppColors.tertiaryText)
+                }
             }
             
             if isSelected {
@@ -762,4 +750,45 @@ struct CookingInstructionButton: View {
 #Preview {
     PizzaBuilderView(menuItem: MockData.menuItems[0])
         .environmentObject(CartManager.shared)
+}
+
+
+// MARK: - Ingredient Image Reusable Images
+struct IngredientImage: View {
+    let ingredient: Ingredient
+    var size: CGFloat = 48
+    
+    // "Pepper Jack" -> "pepper_jack" (must match the name in Assets)
+    private var assetName: String {
+        ingredient.image
+    }
+    
+    private var fallbackSymbol: String {
+        switch ingredient.category {
+        case .sauce, .finishingSauce: return "drop.fill"
+        case .cheese: return "square.grid.2x2.fill"
+        case .meat: return "fork.knife"
+        case .vegetable: return "leaf.fill"
+        default: return "fork.knife"
+        }
+    }
+    
+    var body: some View {
+        Group {
+            if UIImage(named: assetName) != nil {
+                Image(assetName)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                ZStack {
+                    AppColors.lightGray.opacity(0.4)
+                    Image(systemName: fallbackSymbol)
+                        .font(.system(size: size * 0.4))
+                        .foregroundColor(AppColors.primaryRed)
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.smallCornerRadius))
+    }
 }

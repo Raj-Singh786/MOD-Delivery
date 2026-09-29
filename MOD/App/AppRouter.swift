@@ -22,6 +22,10 @@ class AppRouter: ObservableObject {
     @Published var menuPath: NavigationPath = NavigationPath()
     @Published var rewardsPath: NavigationPath = NavigationPath()
     
+    
+    @Published var pendingCartOpen: Bool = false
+    @Published var pendingTab: AppTab?
+    
     enum AppTab: String, CaseIterable {
         case home = "home"
         case menu = "menu"
@@ -61,7 +65,16 @@ class AppRouter: ObservableObject {
     }
     
     func showCartScreen() {
-        showCart = true
+        if showCart {
+            // Flag is stuck as true: reset it, then present again
+            Task {
+                showCart = false
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                showCart = true
+            }
+        } else {
+            showCart = true
+        }
     }
     
     func hideCartScreen() {

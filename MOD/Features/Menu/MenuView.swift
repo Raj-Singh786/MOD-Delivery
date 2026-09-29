@@ -25,8 +25,6 @@ struct MenuView: View {
                     ErrorView(message: errorMessage, retryAction: loadData)
                 } else {
                     VStack(spacing: 0) {
-                        // Search Bar
-                        searchBar
                         
                         // Category Selector
                         categorySelector
@@ -42,6 +40,11 @@ struct MenuView: View {
             }
             .navigationTitle("Menu")
             .navigationBarTitleDisplayMode(.large)
+            .searchable(
+                text: $searchText,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Search Pizza, Drinks, Sides..."
+            )
             .refreshable {
                 await loadData()
             }
@@ -49,33 +52,15 @@ struct MenuView: View {
         .task {
             await loadData()
         }
-        .searchable(text: $searchText, prompt: "Search Pizza, Drinks, Sides...")
     }
     
-    // MARK: - Search Bar
-    
-    private var searchBar: some View {
-        HStack {
-            HStack(spacing: AppSpacing.sm) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(AppColors.tertiaryText)
-                
-                TextField("Search menu...", text: $searchText)
-                    .textFieldStyle(PlainTextFieldStyle())
-            }
-            .padding(AppSpacing.md)
-            .background(AppColors.white)
-            .cornerRadius(AppSpacing.cornerRadius)
-        }
-        .padding(.horizontal, AppSpacing.lg)
-        .padding(.vertical, AppSpacing.sm)
-    }
     
     // MARK: - Category Selector
     
     private var categorySelector: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: AppSpacing.sm) {
+
                 CategoryChip(
                     title: "All",
                     isSelected: selectedCategory == nil,
@@ -83,7 +68,7 @@ struct MenuView: View {
                         selectedCategory = nil
                     }
                 )
-                
+
                 ForEach(categories) { category in
                     CategoryChip(
                         title: category.name,
@@ -95,10 +80,10 @@ struct MenuView: View {
                 }
             }
             .padding(.horizontal, AppSpacing.lg)
+            .padding(.vertical, 2)   // Important: gives the 2pt border room
         }
-        .padding(.vertical, AppSpacing.sm)
+        .frame(height: 50)           // Prevents vertical clipping
     }
-    
     // MARK: - Menu Items List
     
     private var menuItemsList: some View {
@@ -162,7 +147,9 @@ struct MenuView: View {
     // MARK: - Data Loading
     
     private func loadData() async {
-        isLoading = true
+        if menuItems.isEmpty {
+            isLoading = true
+        }
         errorMessage = nil
         
         do {
@@ -204,7 +191,7 @@ struct CategoryChip: View {
                 )
                 .overlay(
                     Capsule()
-                        .stroke(AppColors.primaryRed, lineWidth: isSelected ? 0 : 1)
+                        .stroke(AppColors.primaryBurgundy, lineWidth: isSelected ? 0 : 2)
                 )
         }
     }
@@ -230,8 +217,8 @@ struct MenuItemRow: View {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 HStack {
                     Text(item.name)
-                        .font(AppFonts.callout)
-                        .foregroundColor(AppColors.primaryText)
+                        .font(AppFonts.subtitle)
+                        .foregroundColor(AppColors.black)
                         .lineLimit(2)
                     
                     Spacer()
@@ -282,13 +269,21 @@ struct MenuItemRow: View {
                         Button(action: {
                             appRouter.showPizzaBuilderScreen(menuItem: item)
                         }) {
-                            Text("Customize")
-                                .font(AppFonts.caption)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, AppSpacing.md)
-                                .padding(.vertical, AppSpacing.sm)
-                                .background(AppColors.primaryRed)
-                                .cornerRadius(AppSpacing.smallCornerRadius)
+                            HStack(spacing: AppSpacing.xs) {
+                                Text("Customize")
+                                    .font(AppFonts.callout)
+                                    .fontWeight(.bold)
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, AppSpacing.lg)
+                            .padding(.vertical, AppSpacing.sm)
+                            .background(
+                                Capsule()
+                                    .fill(AppColors.primaryRed)
+                            )
                         }
                     } else {
                         Button(action: {
@@ -298,8 +293,7 @@ struct MenuItemRow: View {
                                 .font(.system(size: 28))
                                 .foregroundColor(AppColors.primaryRed)
                         }
-                    }
-                }
+                    }                }
             }
         }
         .padding(AppSpacing.md)
