@@ -69,6 +69,7 @@ struct Reward: Codable, Identifiable {
     let isActive: Bool
     let expiryDate: Date?
     let termsAndConditions: String?
+    let eligibleLocation: String?
     
     enum RewardCategory: String, Codable {
         case food = "food"
@@ -91,7 +92,8 @@ struct Reward: Codable, Identifiable {
          category: RewardCategory = .discount,
          isActive: Bool = true,
          expiryDate: Date? = nil,
-         termsAndConditions: String? = nil) {
+         termsAndConditions: String? = nil,
+         eligibleLocation: String? = nil) {
         self.id = id
         self.name = name
         self.description = description
@@ -101,6 +103,7 @@ struct Reward: Codable, Identifiable {
         self.isActive = isActive
         self.expiryDate = expiryDate
         self.termsAndConditions = termsAndConditions
+        self.eligibleLocation = eligibleLocation
     }
 }
 

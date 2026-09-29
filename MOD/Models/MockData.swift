@@ -607,28 +607,32 @@ struct MockData {
             name: "Free Drink",
             description: "Any soft drink on the house",
             pointsRequired: 100,
-            category: .drink
+            category: .drink,
+            eligibleLocation: "All Locations"
         ),
         Reward(
             id: "reward2",
             name: "₹10 Off",
             description: "Get ₹10 off your next order",
             pointsRequired: 250,
-            category: .discount
+            category: .discount,
+            eligibleLocation: "Online Only"
         ),
         Reward(
             id: "reward3",
             name: "Free Meal",
             description: "Complimentary pizza and drink",
             pointsRequired: 500,
-            category: .food
+            category: .food,
+            eligibleLocation: "Austin Only"
         ),
         Reward(
             id: "reward4",
             name: "Garlic Bread",
             description: "Free garlic bread with any order",
             pointsRequired: 150,
-            category: .food
+            category: .food,
+            eligibleLocation: "All Locations"
         )
     ]
     

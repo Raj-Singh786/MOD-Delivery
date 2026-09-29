@@ -330,6 +330,12 @@ struct CartItemRow: View {
                     .foregroundColor(AppColors.primaryRed)
             }
             
+            // Added estimated points text
+            let estimatedPoints = Int(item.totalPrice * Constants.loyaltyPointsPerRupee)
+            Text("+\(estimatedPoints) pts")
+                .font(AppFonts.caption)
+                .foregroundColor(AppColors.success)
+            
             // Item Details
             if let config = item.pizzaConfiguration {
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {

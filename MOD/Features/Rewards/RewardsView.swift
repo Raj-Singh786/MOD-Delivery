@@ -14,6 +14,7 @@ struct RewardsView: View {
     @State private var errorMessage: String?
     @State private var showQRCode: Bool = false
     @State private var loyaltyQR: LoyaltyQR?
+    @State private var selectedReward: Reward? = nil
     
     private let loyaltyRepository = MockLoyaltyRepository.shared
     
@@ -91,6 +92,15 @@ struct RewardsView: View {
             }
             .sheet(isPresented: $showQRCode) {
                 LoyaltyQRView(loyaltyQR: loyaltyQR)
+            }
+            .sheet(item: $selectedReward) { reward in
+                RewardDetailView(
+                    reward: reward,
+                    loyaltySummary: loyaltySummary,
+                    onRedeem: {
+                        await loadData()
+                    }
+                )
             }
         }
         .task {
@@ -222,8 +232,11 @@ struct RewardsView: View {
                 emptyRewardsView
             } else {
                 ForEach(rewards) { reward in
-                    RewardCard(reward: reward)
-                        .padding(.horizontal, AppSpacing.lg)
+                    RewardCard(reward: reward, onTap: {
+                        selectedReward = reward
+                    })
+                    .padding(.horizontal, AppSpacing.lg)
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -501,59 +514,61 @@ struct StatCard: View {
 // MARK: - Reward Card
 struct RewardCard: View {
     let reward: Reward
+    let onTap: () -> Void
     @State private var isRedeeming: Bool = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.md) {
-            // Reward Image Placeholder
-            ZStack {
-                Rectangle()
-                    .fill(AppColors.lightGray)
-                    .frame(height: 120)
-                    .cornerRadius(AppSpacing.smallCornerRadius)
-                
-                Image(systemName: "gift.fill")
-                    .font(.system(size: 40))
-                    .foregroundColor(AppColors.mediumGray)
-            }
-            
-            VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Text(reward.name)
-                    .font(AppFonts.callout)
-                    .foregroundColor(AppColors.primaryText)
-                
-                Text(reward.description)
-                    .font(AppFonts.caption)
-                    .foregroundColor(AppColors.secondaryText)
-                    .lineLimit(2)
-                
-                HStack {
-                    Text("\(reward.pointsRequired) Points")
-                        .font(AppFonts.callout)
-                        .fontWeight(.semibold)
-                        .foregroundColor(AppColors.primaryRed)
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                // Reward Image Placeholder
+                ZStack {
+                    Rectangle()
+                        .fill(AppColors.lightGray)
+                        .frame(height: 120)
+                        .cornerRadius(AppSpacing.smallCornerRadius)
                     
-                    Spacer()
+                    Image(systemName: "gift.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(AppColors.mediumGray)
                 }
+                
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Text(reward.name)
+                        .font(AppFonts.callout)
+                        .foregroundColor(AppColors.primaryText)
+                    
+                    Text(reward.description)
+                        .font(AppFonts.caption)
+                        .foregroundColor(AppColors.secondaryText)
+                        .lineLimit(2)
+                    
+                    HStack {
+                        Text("\(reward.pointsRequired) Points")
+                            .font(AppFonts.callout)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AppColors.primaryRed)
+                        
+                        Spacer()
+                    }
+                }
+                
+                Button(action: onTap) {
+                    Text("Redeem")
+                        .font(AppFonts.subheadline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, AppSpacing.sm)
+                        .background(AppColors.primaryRed)
+                        .cornerRadius(AppSpacing.smallCornerRadius)
+                }
+                .disabled(isRedeeming)
             }
-            
-            Button(action: {
-                // Redeem logic
-            }) {
-                Text("Redeem")
-                    .font(AppFonts.subheadline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, AppSpacing.sm)
-                    .background(AppColors.primaryRed)
-                    .cornerRadius(AppSpacing.smallCornerRadius)
-            }
-            .disabled(isRedeeming)
+            .padding(AppSpacing.md)
+            .background(AppColors.white)
+            .cornerRadius(AppSpacing.cornerRadius)
+            .shadow(color: AppColors.shadow, radius: 2, x: 0, y: 1)
         }
-        .padding(AppSpacing.md)
-        .background(AppColors.white)
-        .cornerRadius(AppSpacing.cornerRadius)
-        .shadow(color: AppColors.shadow, radius: 2, x: 0, y: 1)
+        .buttonStyle(.plain)
     }
 }
 
@@ -845,8 +860,379 @@ struct LoyaltyQRView: View {
     }
 }
 
+// MARK: - Reward Detail View
+struct RewardDetailView: View {
+    let reward: Reward
+    let loyaltySummary: LoyaltySummary?
+    var onRedeem: () async -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var showConfirm: Bool = false
+    @State private var redeemed: Bool = false
+    @State private var isRedeeming: Bool = false
+    @State private var showCheckoutQR: Bool = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: AppSpacing.lg) {
+                // Large reward image at top
+                ZStack {
+                    Rectangle()
+                        .fill(AppColors.lightGray)
+                        .frame(height: 200)
+                        .cornerRadius(AppSpacing.cornerRadius, corners: [.topLeft, .topRight])
+                    
+                    if let imageName = reward.image, !imageName.isEmpty {
+                        Image(systemName: imageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120, height: 120)
+                            .foregroundColor(AppColors.mediumGray)
+                    } else {
+                        Image(systemName: "pizza")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120, height: 120)
+                            .foregroundColor(AppColors.mediumGray)
+                    }
+                }
+                
+                VStack(spacing: AppSpacing.md) {
+                    // Title and subtitle
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        Text(reward.name)
+                            .font(AppFonts.title)
+                            .foregroundColor(AppColors.primaryText)
+                        
+                        Text(reward.description)
+                            .font(AppFonts.subheadline)
+                            .foregroundColor(AppColors.secondaryText)
+                    }
+                    
+                    // Reward Details Card
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        Text("Reward Details")
+                            .font(AppFonts.callout.weight(.semibold))
+                            .foregroundColor(AppColors.primaryText)
+                            .padding(.bottom, 4)
+                        
+                        HStack {
+                            Text("Required Points:")
+                                .font(AppFonts.caption)
+                            Spacer()
+                            Text("\(reward.pointsRequired)")
+                                .font(AppFonts.callout)
+                                .foregroundColor(AppColors.primaryRed)
+                        }
+                        
+                        if let summary = loyaltySummary {
+                            HStack {
+                                Text("Current Points:")
+                                    .font(AppFonts.caption)
+                                Spacer()
+                                Text("\(summary.availablePoints)")
+                                    .font(AppFonts.callout)
+                                    .foregroundColor(AppColors.primaryRed)
+                            }
+                            
+                            if summary.availablePoints >= reward.pointsRequired {
+                                Text("Ready to Redeem")
+                                    .font(AppFonts.caption)
+                                    .foregroundColor(AppColors.success)
+                            } else {
+                                Text("Not enough points")
+                                    .font(AppFonts.caption)
+                                    .foregroundColor(AppColors.error)
+                            }
+                        }
+                        
+                        if let expiry = reward.expiryDate {
+                            HStack {
+                                Text("Expires:")
+                                    .font(AppFonts.caption)
+                                Spacer()
+                                Text(formatDate(expiry))
+                                    .font(AppFonts.caption)
+                            }
+                        }
+                        
+                        if let location = reward.eligibleLocation {
+                            HStack {
+                                Text("Eligible Location:")
+                                    .font(AppFonts.caption)
+                                Spacer()
+                                Text(location)
+                                    .font(AppFonts.caption)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(AppColors.white)
+                    .cornerRadius(AppSpacing.cornerRadius)
+                    .shadow(color: AppColors.shadow, radius: 2, x: 0, y: 1)
+                    
+                    // Terms & Conditions Card
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        Text("Terms & Conditions")
+                            .font(AppFonts.callout.weight(.semibold))
+                            .foregroundColor(AppColors.primaryText)
+                            .padding(.bottom, 4)
+                        
+                        if let terms = reward.termsAndConditions, !terms.isEmpty {
+                            Text(terms)
+                                .font(AppFonts.caption)
+                                .foregroundColor(AppColors.secondaryText)
+                        } else {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(alignment: .top, spacing: 6) {
+                                    Text("•")
+                                        .font(AppFonts.caption)
+                                        .foregroundColor(AppColors.secondaryText)
+                                    Text("Valid on qualifying orders only")
+                                        .font(AppFonts.caption)
+                                        .foregroundColor(AppColors.secondaryText)
+                                }
+                                HStack(alignment: .top, spacing: 6) {
+                                    Text("•")
+                                        .font(AppFonts.caption)
+                                        .foregroundColor(AppColors.secondaryText)
+                                    Text("Cannot be combined with selected offers")
+                                        .font(AppFonts.caption)
+                                        .foregroundColor(AppColors.secondaryText)
+                                }
+                                HStack(alignment: .top, spacing: 6) {
+                                    Text("•")
+                                        .font(AppFonts.caption)
+                                        .foregroundColor(AppColors.secondaryText)
+                                    Text("Backend confirms redemption status before use")
+                                        .font(AppFonts.caption)
+                                        .foregroundColor(AppColors.secondaryText)
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(AppColors.white)
+                    .cornerRadius(AppSpacing.cornerRadius)
+                    .shadow(color: AppColors.shadow, radius: 2, x: 0, y: 1)
+                }
+                .padding(.horizontal, AppSpacing.lg)
+                
+                Spacer()
+                
+                // Redeem Button Area
+                if !redeemed {
+                    Button(action: { showConfirm = true }) {
+                        Text("Redeem for \(reward.pointsRequired) Points")
+                            .font(AppFonts.subheadline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background((loyaltySummary?.availablePoints ?? 0) >= reward.pointsRequired ? AppColors.primaryRed : AppColors.lightGray)
+                            .cornerRadius(AppSpacing.cornerRadius)
+                    }
+                    .disabled((loyaltySummary?.availablePoints ?? 0) < reward.pointsRequired || isRedeeming)
+                    .padding(.horizontal, AppSpacing.lg)
+                    .padding(.bottom, AppSpacing.lg)
+                    .confirmationDialog("Confirm Redemption", isPresented: $showConfirm, titleVisibility: .visible) {
+                        Button("Confirm", role: .destructive) {
+                            isRedeeming = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                redeemed = true
+                                isRedeeming = false
+                                Task { await onRedeem() }
+                            }
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    }
+                } else {
+                    VStack(spacing: AppSpacing.md) {
+                        Text("Reward Ready!")
+                            .font(AppFonts.title)
+                            .foregroundColor(AppColors.success)
+                        
+                        Button(action: {
+                            showCheckoutQR = true
+                        }) {
+                            Text("Show at Checkout")
+                                .font(AppFonts.subheadline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(AppColors.primaryRed)
+                                .cornerRadius(AppSpacing.cornerRadius)
+                        }
+                    }
+                    .padding(.horizontal, AppSpacing.lg)
+                    .padding(.bottom, AppSpacing.lg)
+                }
+            }
+        }
+        .background(AppColors.secondaryBackground)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .sheet(isPresented: $showCheckoutQR) {
+            if let summary = loyaltySummary {
+                EnhancedLoyaltyQRView(loyaltyQR: LoyaltyQR.mock(from: summary), reward: reward)
+            }
+        }
+    }
+    
+    func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - CornerRadius for specific corners (helper extension)
+fileprivate extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape( RoundedCorner(radius: radius, corners: corners) )
+    }
+}
+
+fileprivate struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
+    }
+}
+
+// MARK: - Enhanced Loyalty QR View
+struct EnhancedLoyaltyQRView: View {
+    @Environment(\.dismiss) private var dismiss
+    let loyaltyQR: LoyaltyQR?
+    let reward: Reward
+    
+    @State private var timeRemaining: TimeInterval = 0
+    @State private var timer: Timer?
+    
+    var body: some View {
+        VStack(spacing: AppSpacing.lg) {
+            Spacer()
+            
+            ZStack {
+                Rectangle()
+                    .fill(AppColors.white)
+                    .frame(width: 280, height: 280)
+                    .cornerRadius(AppSpacing.cornerRadius)
+                    .shadow(color: AppColors.shadow, radius: 12, x: 0, y: 6)
+                
+                if loyaltyQR != nil {
+                    VStack(spacing: AppSpacing.md) {
+                        Image(systemName: "qrcode")
+                            .font(.system(size: 180))
+                            .foregroundColor(AppColors.primaryRed)
+                        
+                        VStack(spacing: AppSpacing.xs) {
+                            Text(loyaltyQR?.customerName ?? "Member Name")
+                                .font(AppFonts.title)
+                                .foregroundColor(AppColors.primaryText)
+                            
+                            Text("Member ID: \(loyaltyQR?.rewardId ?? "123456789")")
+                                .font(AppFonts.caption)
+                                .foregroundColor(AppColors.secondaryText)
+                        }
+                        
+                        Text("\(loyaltyQR?.currentPoints ?? 0) Points")
+                            .font(AppFonts.callout)
+                            .foregroundColor(AppColors.primaryRed)
+                        
+                        Text("Reward: \(reward.name)")
+                            .font(AppFonts.subheadline)
+                            .foregroundColor(AppColors.primaryText)
+                    }
+                    .padding(.top, AppSpacing.md)
+                }
+            }
+            
+            if loyaltyQR != nil {
+                Text("Expires in \(Int(timeRemaining))s")
+                    .font(AppFonts.caption)
+                    .foregroundColor(AppColors.warning)
+            }
+            
+            Spacer()
+            
+            Button(action: {
+                // Refresh QR code action
+                refreshQR()
+            }) {
+                Text("Refresh QR")
+                    .font(AppFonts.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(AppColors.primaryRed)
+                    .cornerRadius(AppSpacing.cornerRadius)
+                    .padding(.horizontal, AppSpacing.lg)
+            }
+            
+            Button(action: {
+                dismiss()
+            }) {
+                Text("Done")
+                    .font(AppFonts.subheadline)
+                    .foregroundColor(AppColors.primaryRed)
+                    .padding(.top, AppSpacing.sm)
+            }
+        }
+        .padding(AppSpacing.lg)
+        .background(AppColors.secondaryBackground)
+        .onAppear {
+            setupTimer()
+        }
+        .onDisappear {
+            timer?.invalidate()
+        }
+    }
+    
+    private func setupTimer() {
+        if let expiresAt = loyaltyQR?.expiresAt {
+            timeRemaining = max(0, expiresAt.timeIntervalSince(Date()))
+            timer?.invalidate()
+            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { t in
+                if timeRemaining > 0 {
+                    timeRemaining -= 1
+                } else {
+                    t.invalidate()
+                }
+            }
+        }
+    }
+    
+    private func refreshQR() {
+        // Implement refresh logic if available
+        // For now, reset timer to a default value (e.g. 60 seconds)
+        timeRemaining = 60
+    }
+}
+
+// Assumes Reward struct has expiryDate: Date?, eligibleLocation: String?, termsAndConditions: String?, termsAndConditionsList: [String]?, image: String? properties. If not, add them in model.
+
+// Add memberID to LoyaltyQR if not present, add a static mock initializer to create one from LoyaltySummary for demo purposes.
+extension LoyaltyQR {
+    static func mock(from summary: LoyaltySummary) -> LoyaltyQR {
+        LoyaltyQR(
+            qrCode: "MOCK-QR-\(summary.availablePoints)",
+            customerName: "Member \(summary.availablePoints)",
+            currentPoints: summary.availablePoints,
+            expiresAt: Date().addingTimeInterval(60)
+        )
+    }
+}
+
 #Preview {
     RewardsView()
         .environmentObject(AppState.shared)
         .environmentObject(AppRouter())
 }
+
