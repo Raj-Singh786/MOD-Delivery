@@ -603,6 +603,7 @@ struct OrderTypeButton: View {
 
 // MARK: - Offer Banner View
 struct OfferBannerView: View {
+    @EnvironmentObject var appRouter: AppRouter
     let banner: OfferBanner
 
     private var baseColor: Color {
@@ -643,7 +644,9 @@ struct OfferBannerView: View {
 
                 Spacer()
 
-                Button(action: {}) {
+                Button(action: {
+                    appRouter.navigateToMenu()
+                }) {
                     Text(banner.callToAction)
                         .font(AppFonts.callout)
                         .fontWeight(.semibold)
