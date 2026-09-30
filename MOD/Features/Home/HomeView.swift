@@ -694,6 +694,7 @@ struct OfferBannerView: View {
 struct MenuItemCard: View {
     let item: MenuItem
     @State private var isFavorite: Bool = false
+    @EnvironmentObject var appRouter: AppRouter
 
     private let cardWidth: CGFloat = 220
     private let imageHeight: CGFloat = 190
@@ -708,14 +709,19 @@ struct MenuItemCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            imageSection
-            infoSection
+        Button(action: {
+            appRouter.showPizzaBuilderScreen(menuItem: item)
+        }) {
+            VStack(alignment: .leading, spacing: 0) {
+                imageSection
+                infoSection
+            }
+            .frame(width: cardWidth)
+            .background(AppColors.white)
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
         }
-        .frame(width: cardWidth)
-        .background(AppColors.white)
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+        .buttonStyle(.plain)
     }
 
     // MARK: - Image + overlays

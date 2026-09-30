@@ -99,7 +99,9 @@ struct RewardsView: View {
                 RewardDetailView(
                     reward: reward,
                     loyaltySummary: loyaltySummary,
-                    onRedeem: { await loadData() }
+                    onRedeem: {
+                        await loadData()
+                    }
                 )
             }
         }
@@ -236,7 +238,6 @@ struct RewardsView: View {
                         selectedReward = reward
                     })
                     .padding(.horizontal, AppSpacing.lg)
-                    .buttonStyle(.plain)
                 }
             }
         }
@@ -593,7 +594,7 @@ struct RewardCard: View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: AppSpacing.md) {
                 // Reward image (falls back to the gift icon if no asset is found)
-                RewardImage(imageName: reward.image, iconSize: 40)
+                RewardImage(imageName: reward.image, iconSize: 40, contentMode: .fill)
                     .frame(height: 140)
                     .clipShape(RoundedRectangle(cornerRadius: AppSpacing.smallCornerRadius))
 
@@ -776,31 +777,23 @@ struct TransactionRow: View {
 // MARK: - Campaign Card
 struct CampaignCard: View {
     let campaign: Campaign
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            // Campaign Image Placeholder
-            ZStack {
-                Rectangle()
-                    .fill(AppColors.lightGray)
-                    .frame(height: 120)
-                    .cornerRadius(AppSpacing.smallCornerRadius)
-                
-                Image(systemName: "tag.fill")
-                    .font(.system(size: 40))
-                    .foregroundColor(AppColors.mediumGray)
-            }
-            
+            RewardImage(imageName: campaign.image, iconSize: 40, fallbackIcon: "tag.fill", contentMode: .fill)
+                .frame(height: 140)
+                .clipShape(RoundedRectangle(cornerRadius: AppSpacing.smallCornerRadius))
+
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(campaign.title)
                     .font(AppFonts.callout)
                     .foregroundColor(AppColors.primaryText)
-                
+
                 Text(campaign.description)
                     .font(AppFonts.caption)
                     .foregroundColor(AppColors.secondaryText)
                     .lineLimit(2)
-                
+
                 if let callToAction = campaign.callToAction {
                     Button(action: {}) {
                         Text(callToAction)
@@ -1765,7 +1758,7 @@ struct EnhancedLoyaltyQRView: View {
 
         if let item = freeDrinkItem {
             // NOTE: make sure this line is priced at $0 (see the note in the chat)
-            cartManager.addItem(CartItem(menuItem: item, quantity: 1))
+            cartManager.addItem(CartItem(menuItem: item, quantity: 1, unitPrice: 0))
         }
 
         isApplied = true
@@ -1842,6 +1835,8 @@ extension LoyaltyQR {
 struct RewardImage: View {
     let imageName: String?
     var iconSize: CGFloat = 30
+    var fallbackIcon: String = "gift.fill"
+    var contentMode: ContentMode = .fill
 
     private var assetName: String? {
         if let name = imageName, !name.isEmpty, UIImage(named: name) != nil {
@@ -1858,7 +1853,7 @@ struct RewardImage: View {
                     if let name = assetName {
                         Image(name)
                             .resizable()
-                            .scaledToFill()
+                            .aspectRatio(contentMode: contentMode)
                     } else {
                         ZStack {
                             AppColors.lightGray
@@ -1869,6 +1864,7 @@ struct RewardImage: View {
                     }
                 }
             )
+            .background(AppColors.lightGray.opacity(0.3))
             .clipped()
     }
 }

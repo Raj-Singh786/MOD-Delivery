@@ -143,7 +143,7 @@ struct MockData {
         MenuItem(
             id: "item10",
             categoryId: "cat6",
-            name: "pizza4",
+            name: "Soft Drink",
             description: "Refreshing soda",
             basePrice: 79,
             calories: 140,
@@ -579,7 +579,7 @@ struct MockData {
     
     // MARK: - Loyalty Data
     static let loyaltySummary = LoyaltySummary(
-        availablePoints: 1240,
+        availablePoints: 1244,
         pendingPoints: 84,
         pointsToNextReward: 260,
         currentTier: LoyaltyTier(
@@ -640,6 +640,7 @@ struct MockData {
             id: "campaign1",
             title: "2X Points Weekend",
             description: "Earn double points on all orders this weekend",
+            image: "2X Points Weekend",
             type: .doublePoints,
             startDate: Date().addingTimeInterval(-86400),
             endDate: Date().addingTimeInterval(86400 * 2),
@@ -650,6 +651,7 @@ struct MockData {
             id: "campaign2",
             title: "Birthday Reward",
             description: "Get a special treat on your birthday",
+            image: "Birthday Reward",
             type: .birthdayBonus,
             startDate: Date(),
             endDate: Date().addingTimeInterval(86400 * 365),
@@ -660,6 +662,7 @@ struct MockData {
             id: "campaign3",
             title: "New Member Bonus",
             description: "Get 100 bonus points when you sign up",
+            image: "New Member Bonus",
             type: .newMember,
             startDate: Date(),
             endDate: Date().addingTimeInterval(86400 * 30),
