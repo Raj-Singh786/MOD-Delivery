@@ -11,13 +11,13 @@ struct CheckoutView: View {
     @State private var showAddressPicker: Bool = false
     @State private var showPaymentPicker: Bool = false
     @State private var showRestaurantPicker: Bool = false
-    @State private var showLogin: Bool = false
+    //@State private var showLogin: Bool = false
     @State private var isProcessingOrder: Bool = false
     @State private var errorMessage: String?
     
     var body: some View {
         NavigationView {
-            ZStack {
+            ZStack(alignment: .bottom) {
                 AppColors.secondaryBackground
                     .ignoresSafeArea()
                 
@@ -58,6 +58,7 @@ struct CheckoutView: View {
             }
             .navigationTitle("Checkout")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear { syncOrderType() }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
@@ -74,13 +75,13 @@ struct CheckoutView: View {
             .sheet(isPresented: $showRestaurantPicker) {
                 RestaurantPickerView(selectedRestaurant: $cartManager.cart.restaurant)
             }
-            .sheet(isPresented: $showLogin) {
-                LoginView(onLoginComplete: {
-                    showLogin = false
-                })
-                .environmentObject(appState)
-                .environmentObject(appRouter)
-            }
+//            .sheet(isPresented: $showLogin) {
+//                LoginView(onLoginComplete: {
+//                    showLogin = false
+//                })
+//                .environmentObject(appState)
+//                .environmentObject(appRouter)
+//            }
             .alert("Error", isPresented: .constant(errorMessage != nil)) {
                 Button("OK") {
                     errorMessage = nil
@@ -100,19 +101,20 @@ struct CheckoutView: View {
             Text("Order Type")
                 .font(AppFonts.callout)
                 .foregroundColor(AppColors.primaryText)
-            
-            HStack(spacing: AppSpacing.sm) {
-                ForEach(OrderType.allCases, id: \.self) { orderType in
-                    OrderTypeChip(
-                        orderType: orderType,
-                        isSelected: cartManager.cart.orderType == orderType,
-                        action: {
-                            cartManager.setOrderType(orderType)
-                        }
-                    )
-                }
+
+            HStack(spacing: AppSpacing.xs) {
+                Image(systemName: cartManager.cart.orderType.icon)
+                    .font(.system(size: 16))
+
+                Text(cartManager.cart.orderType.displayName)
+                    .font(AppFonts.subheadline)
             }
+            .foregroundColor(.white)
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.vertical, AppSpacing.sm)
+            .background(Capsule().fill(AppColors.primaryRed))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)   // keeps the card full width
         .padding(AppSpacing.lg)
         .background(AppColors.white)
         .cornerRadius(AppSpacing.cornerRadius)
@@ -386,51 +388,37 @@ struct CheckoutView: View {
     private var placeOrderButton: some View {
         VStack(spacing: 0) {
             Divider()
-            
-            VStack(spacing: AppSpacing.md) {
-                // Check if login required
-                if !appState.isAuthenticated {
-                    VStack(spacing: AppSpacing.sm) {
-                        Text("Almost Ready!")
-                            .font(AppFonts.callout)
-                            .foregroundColor(AppColors.primaryText)
-                        
-                        Text("Login with your mobile number to continue with your order.")
-                            .font(AppFonts.subheadline)
-                            .foregroundColor(AppColors.secondaryText)
-                            .multilineTextAlignment(.center)
-                        
-                        PrimaryButton(title: "Continue with OTP", action: {
-                            showLogin = true
-                        })
-                    }
-                    .padding(AppSpacing.lg)
-                } else {
-                    HStack {
-                        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                            Text("Total")
-                                .font(AppFonts.subheadline)
-                                .foregroundColor(AppColors.secondaryText)
-                            
-                            Text("₹\(Int(cartManager.total))")
-                                .font(AppFonts.callout)
-                                .fontWeight(.semibold)
-                                .foregroundColor(AppColors.primaryRed)
-                        }
-                        
-                        Spacer()
-                        
-                        PrimaryButton(
-                            title: "Place Order",
-                            action: placeOrder,
-                            isLoading: isProcessingOrder,
-                            isDisabled: !isCheckoutValid
-                        )
-                    }
+
+            HStack {
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Text("Total")
+                        .font(AppFonts.subheadline)
+                        .foregroundColor(AppColors.secondaryText)
+
+                    Text("₹\(Int(cartManager.total))")
+                        .font(AppFonts.callout)
+                        .fontWeight(.semibold)
+                        .foregroundColor(AppColors.primaryRed)
                 }
+
+                Spacer()
+
+                PrimaryButton(
+                    title: "Place Order",
+                    action: placeOrder,
+                    isLoading: isProcessingOrder,
+                    isDisabled: !isCheckoutValid
+                )
             }
             .padding(AppSpacing.lg)
             .background(AppColors.white)
+        }
+    }
+    
+    private func syncOrderType() {
+        let selected: OrderType? = appState.selectedOrderType
+        if let selected, cartManager.cart.orderType != selected {
+            cartManager.setOrderType(selected)
         }
     }
     

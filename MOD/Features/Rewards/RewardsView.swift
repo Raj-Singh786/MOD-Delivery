@@ -524,56 +524,103 @@ struct StatCard: View {
 }
 
 // MARK: - Reward Card
+//struct RewardCard: View {
+//    let reward: Reward
+//    let onTap: () -> Void
+//    @State private var isRedeeming: Bool = false
+//    
+//    var body: some View {
+//        Button(action: onTap) {
+//            VStack(alignment: .leading, spacing: AppSpacing.md) {
+//                // Reward Image Placeholder
+//                ZStack {
+//                    Rectangle()
+//                        .fill(AppColors.lightGray)
+//                        .frame(height: 120)
+//                        .cornerRadius(AppSpacing.smallCornerRadius)
+//                    
+//                    Image(systemName: "gift.fill")
+//                        .font(.system(size: 40))
+//                        .foregroundColor(AppColors.mediumGray)
+//                }
+//                
+//                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+//                    Text(reward.name)
+//                        .font(AppFonts.callout)
+//                        .foregroundColor(AppColors.primaryText)
+//                    
+//                    Text(reward.description)
+//                        .font(AppFonts.caption)
+//                        .foregroundColor(AppColors.secondaryText)
+//                        .lineLimit(2)
+//                    
+//                    HStack {
+//                        Text("\(reward.pointsRequired) Points")
+//                            .font(AppFonts.callout)
+//                            .fontWeight(.semibold)
+//                            .foregroundColor(AppColors.primaryRed)
+//                        
+//                        Spacer()
+//                    }
+//                }
+//                
+//                Button(action: onTap) {
+//                    Text("Redeem")
+//                        .font(AppFonts.subheadline)
+//                        .foregroundColor(.white)
+//                        .frame(maxWidth: .infinity)
+//                        .padding(.vertical, AppSpacing.sm)
+//                        .background(AppColors.primaryRed)
+//                        .cornerRadius(AppSpacing.smallCornerRadius)
+//                }
+//                .disabled(isRedeeming)
+//            }
+//            .padding(AppSpacing.md)
+//            .background(AppColors.white)
+//            .cornerRadius(AppSpacing.cornerRadius)
+//            .shadow(color: AppColors.shadow, radius: 2, x: 0, y: 1)
+//        }
+//        .buttonStyle(.plain)
+//    }
+//}
+
+// MARK: - Reward Card
 struct RewardCard: View {
     let reward: Reward
     let onTap: () -> Void
-    @State private var isRedeeming: Bool = false
-    
+
     var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: AppSpacing.md) {
-                // Reward Image Placeholder
-                ZStack {
-                    Rectangle()
-                        .fill(AppColors.lightGray)
-                        .frame(height: 120)
-                        .cornerRadius(AppSpacing.smallCornerRadius)
-                    
-                    Image(systemName: "gift.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(AppColors.mediumGray)
-                }
-                
+                // Reward image (falls back to the gift icon if no asset is found)
+                RewardImage(imageName: reward.image, iconSize: 40)
+                    .frame(height: 140)
+                    .clipShape(RoundedRectangle(cornerRadius: AppSpacing.smallCornerRadius))
+
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
                     Text(reward.name)
                         .font(AppFonts.callout)
                         .foregroundColor(AppColors.primaryText)
-                    
+
                     Text(reward.description)
                         .font(AppFonts.caption)
                         .foregroundColor(AppColors.secondaryText)
                         .lineLimit(2)
-                    
-                    HStack {
-                        Text("\(reward.pointsRequired) Points")
-                            .font(AppFonts.callout)
-                            .fontWeight(.semibold)
-                            .foregroundColor(AppColors.primaryRed)
-                        
-                        Spacer()
-                    }
+
+                    Text("\(reward.pointsRequired) Points")
+                        .font(AppFonts.callout)
+                        .fontWeight(.semibold)
+                        .foregroundColor(AppColors.primaryRed)
                 }
-                
-                Button(action: onTap) {
-                    Text("Redeem")
-                        .font(AppFonts.subheadline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, AppSpacing.sm)
-                        .background(AppColors.primaryRed)
-                        .cornerRadius(AppSpacing.smallCornerRadius)
-                }
-                .disabled(isRedeeming)
+
+                // Visual button only; the whole card is already tappable
+                Text("Redeem")
+                    .font(AppFonts.subheadline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppSpacing.sm)
+                    .background(AppColors.primaryRed)
+                    .cornerRadius(AppSpacing.smallCornerRadius)
             }
             .padding(AppSpacing.md)
             .background(AppColors.white)
@@ -587,26 +634,19 @@ struct RewardCard: View {
 // MARK: - Reward Preview Card
 struct RewardPreviewCard: View {
     let reward: Reward
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            ZStack {
-                Rectangle()
-                    .fill(AppColors.lightGray)
-                    .frame(height: 80)
-                    .cornerRadius(AppSpacing.smallCornerRadius)
-                
-                Image(systemName: "gift.fill")
-                    .font(.system(size: 30))
-                    .foregroundColor(AppColors.mediumGray)
-            }
-            
+            RewardImage(imageName: reward.image)
+                .frame(height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: AppSpacing.smallCornerRadius))
+
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(reward.name)
                     .font(AppFonts.caption)
                     .foregroundColor(AppColors.primaryText)
                     .lineLimit(1)
-                
+
                 Text("\(reward.pointsRequired) pts")
                     .font(AppFonts.caption)
                     .fontWeight(.semibold)
@@ -1793,6 +1833,48 @@ extension LoyaltyQR {
         )
     }
 }
+
+
+
+
+
+// MARK: - Reward Image
+struct RewardImage: View {
+    let imageName: String?
+    var iconSize: CGFloat = 30
+
+    private var assetName: String? {
+        if let name = imageName, !name.isEmpty, UIImage(named: name) != nil {
+            return name
+        }
+        return nil
+    }
+
+    var body: some View {
+        // Color.clear + overlay keeps the photo from stretching the layout
+        Color.clear
+            .overlay(
+                Group {
+                    if let name = assetName {
+                        Image(name)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        ZStack {
+                            AppColors.lightGray
+                            Image(systemName: "gift.fill")
+                                .font(.system(size: iconSize))
+                                .foregroundColor(AppColors.mediumGray)
+                        }
+                    }
+                }
+            )
+            .clipped()
+    }
+}
+
+
+
 
 #Preview {
     RewardsView()

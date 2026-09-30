@@ -607,7 +607,7 @@ struct MockData {
             name: "Free Drink",
             description: "Any soft drink on the house",
             pointsRequired: 100,
-            category: .drink,
+            image: "free_drink", category: .drink,
             eligibleLocation: "All Locations"
         ),
         Reward(
@@ -615,7 +615,7 @@ struct MockData {
             name: "₹10 Off",
             description: "Get ₹10 off your next order",
             pointsRequired: 250,
-            category: .discount,
+            image: "discount_offer", category: .discount,
             eligibleLocation: "Online Only"
         ),
         Reward(
@@ -623,7 +623,7 @@ struct MockData {
             name: "Free Meal",
             description: "Complimentary pizza and drink",
             pointsRequired: 500,
-            category: .food,
+            image: "free_meal", category: .food,
             eligibleLocation: "Austin Only"
         ),
         Reward(
@@ -631,11 +631,10 @@ struct MockData {
             name: "Garlic Bread",
             description: "Free garlic bread with any order",
             pointsRequired: 150,
-            category: .food,
+            image: "garlic_bread", category: .food,
             eligibleLocation: "All Locations"
         )
     ]
-    
     static let campaigns: [Campaign] = [
         Campaign(
             id: "campaign1",
