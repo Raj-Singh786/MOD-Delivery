@@ -396,36 +396,29 @@ struct CartItemRow: View {
 }
 
 // MARK: - Upsell Item Card
+// MARK: - Upsell Item Card
 struct UpsellItemCard: View {
     let item: MenuItem
     @EnvironmentObject var cartManager: CartManager
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            // Image placeholder
-            ZStack {
-                Rectangle()
-                    .fill(AppColors.lightGray)
-                    .frame(height: 80)
-                    .cornerRadius(AppSpacing.smallCornerRadius)
-                
-                Image(systemName: "fork.knife")
-                    .font(.system(size: 30))
-                    .foregroundColor(AppColors.mediumGray)
-            }
-            
+            RewardImage(imageName: item.image, iconSize: 30, fallbackIcon: "fork.knife")
+                .frame(height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: AppSpacing.smallCornerRadius))
+
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(item.name)
                     .font(AppFonts.caption)
                     .foregroundColor(AppColors.primaryText)
                     .lineLimit(1)
-                
+
                 Text("$\(Int(item.basePrice))")
                     .font(AppFonts.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(AppColors.primaryRed)
             }
-            
+
             Button(action: {
                 let cartItem = CartItem(menuItem: item, quantity: 1)
                 cartManager.addItem(cartItem)
@@ -435,7 +428,7 @@ struct UpsellItemCard: View {
                     .foregroundColor(AppColors.primaryRed)
             }
         }
-        .frame(width: 100)
+        .frame(width: 110)
         .padding(AppSpacing.sm)
         .background(AppColors.white)
         .cornerRadius(AppSpacing.cornerRadius)

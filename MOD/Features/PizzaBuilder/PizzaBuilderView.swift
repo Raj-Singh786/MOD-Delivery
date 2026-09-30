@@ -83,6 +83,19 @@ struct PizzaBuilderView: View {
         }
     }
     
+    // Single source of truth for size + crust pricing
+    private func sizeCrustPrice(size: PizzaSize, crust: PizzaCrust) -> Int {
+        var price = Int(menuItem.basePrice)      // Regular + Thin = the menu price
+
+        if size == .small { price -= 100 }
+        else if size == .large { price += 100 }
+
+        if crust == .thick { price += 50 }
+        else if crust == .cauliflower || crust == .glutenFree { price += 100 }
+
+        return price
+    }
+    
     
     // MARK: - Pizza Preview Section
 
@@ -112,70 +125,35 @@ struct PizzaBuilderView: View {
     
     // MARK: - Size & Crust Section
     
+    private var sizeCrustChoices: [(size: PizzaSize, crust: PizzaCrust, calories: Int)] {
+        [
+            (.small,   .thin,        300),
+            (.regular, .thin,        500),
+            (.regular, .thick,       600),
+            (.regular, .cauliflower, 450),
+            (.regular, .glutenFree,  480)
+        ]
+    }
+
     private var sizeCrustSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             SectionHeader(title: "Choose Your Size & Crust")
-            
+
             VStack(spacing: AppSpacing.sm) {
-                SizeCrustOption(
-                    size: .small,
-                    crust: .thin,
-                    price: 299,
-                    calories: 300,
-                    isSelected: configuration.size == .small && configuration.crust == .thin,
-                    action: {
-                        configuration.size = .small
-                        configuration.crust = .thin
-                    }
-                )
-                
-                SizeCrustOption(
-                    size: .regular,
-                    crust: .thin,
-                    price: 399,
-                    calories: 500,
-                    isSelected: configuration.size == .regular && configuration.crust == .thin,
-                    action: {
-                        configuration.size = .regular
-                        configuration.crust = .thin
-                    }
-                )
-                
-                SizeCrustOption(
-                    size: .regular,
-                    crust: .thick,
-                    price: 449,
-                    calories: 600,
-                    isSelected: configuration.size == .regular && configuration.crust == .thick,
-                    action: {
-                        configuration.size = .regular
-                        configuration.crust = .thick
-                    }
-                )
-                
-                SizeCrustOption(
-                    size: .regular,
-                    crust: .cauliflower,
-                    price: 499,
-                    calories: 450,
-                    isSelected: configuration.size == .regular && configuration.crust == .cauliflower,
-                    action: {
-                        configuration.size = .regular
-                        configuration.crust = .cauliflower
-                    }
-                )
-                
-                SizeCrustOption(
-                    size: .regular,
-                    crust: .glutenFree,
-                    price: 499,
-                    calories: 480,
-                    isSelected: configuration.size == .regular && configuration.crust == .glutenFree,
-                    action: {
-                        configuration.size = .regular
-                        configuration.crust = .glutenFree
-                    }
-                )
+                ForEach(Array(sizeCrustChoices.enumerated()), id: \.offset) { _, choice in
+                    SizeCrustOption(
+                        size: choice.size,
+                        crust: choice.crust,
+                        price: sizeCrustPrice(size: choice.size, crust: choice.crust),
+                        calories: choice.calories,
+                        isSelected: configuration.size == choice.size &&
+                                    configuration.crust == choice.crust,
+                        action: {
+                            configuration.size = choice.size
+                            configuration.crust = choice.crust
+                        }
+                    )
+                }
             }
         }
         .padding(AppSpacing.lg)
@@ -478,26 +456,22 @@ struct PizzaBuilderView: View {
     
     // MARK: - Helper Methods
     
-    private func calculatePrice() -> Int {
-        var basePrice = menuItem.basePrice
-        
-        // Add size/crust modifiers
-        switch configuration.size {
-        case .small: basePrice -= 50
-        case .regular: break
-        case .large: basePrice += 100
-        }
-        
-        if configuration.crust.isAlternative {
-            basePrice += 50
-        }
-        
-        // Add ingredient prices (simplified)
-        let selectedIngredients = configuration.cheese.count + configuration.meats.count + configuration.vegetables.count
-        basePrice += Double(selectedIngredients * 20)
-        
-        return Int(basePrice) * configuration.quantity
+    private func calculateUnitPrice() -> Int {
+        var unitPrice = sizeCrustPrice(size: configuration.size, crust: configuration.crust)
+
+        // Toppings (simplified: ₹20 each, same as before)
+        let selectedIngredients = configuration.cheese.count
+            + configuration.meats.count
+            + configuration.vegetables.count
+        unitPrice += selectedIngredients * 20
+
+        return unitPrice
     }
+
+    private func calculatePrice() -> Int {
+        calculateUnitPrice() * configuration.quantity
+    }
+    
     
     private var isValidConfiguration: Bool {
         // Validate that at least some selections are made
@@ -509,7 +483,7 @@ struct PizzaBuilderView: View {
             menuItem: menuItem,
             pizzaConfiguration: configuration,
             quantity: configuration.quantity,
-            unitPrice: Double(calculatePrice()),
+            unitPrice: Double(calculateUnitPrice()),
             specialInstructions: specialInstructions.isEmpty ? nil : specialInstructions
         )
         
