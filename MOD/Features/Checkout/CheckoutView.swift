@@ -192,7 +192,7 @@ struct CheckoutView: View {
                             .font(AppFonts.subheadline)
                             .foregroundColor(AppColors.secondaryText)
                         
-                        Text("₹\(Int(item.totalPrice))")
+                        Text("$\(Int(item.totalPrice))")
                             .font(AppFonts.subheadline)
                             .foregroundColor(AppColors.primaryText)
                     }
@@ -337,7 +337,7 @@ struct CheckoutView: View {
                 
                 Spacer()
                 
-                Text("₹\(Int(cartManager.cart.subtotal))")
+                Text("$\(Int(cartManager.cart.subtotal))")
                     .font(AppFonts.subheadline)
                     .foregroundColor(AppColors.primaryText)
             }
@@ -350,7 +350,7 @@ struct CheckoutView: View {
                     
                     Spacer()
                     
-                    Text("₹\(Int(cartManager.deliveryFee))")
+                    Text("$\(Int(cartManager.deliveryFee))")
                         .font(AppFonts.subheadline)
                         .foregroundColor(AppColors.primaryText)
                 }
@@ -363,7 +363,7 @@ struct CheckoutView: View {
                 
                 Spacer()
                 
-                Text("₹\(Int(cartManager.tax))")
+                Text("$\(Int(cartManager.tax))")
                     .font(AppFonts.subheadline)
                     .foregroundColor(AppColors.primaryText)
             }
@@ -378,7 +378,7 @@ struct CheckoutView: View {
                 
                 Spacer()
                 
-                Text("₹\(Int(cartManager.total))")
+                Text("$\(Int(cartManager.total))")
                     .font(AppFonts.callout)
                     .fontWeight(.semibold)
                     .foregroundColor(AppColors.primaryRed)
@@ -402,7 +402,7 @@ struct CheckoutView: View {
                         .font(AppFonts.subheadline)
                         .foregroundColor(AppColors.secondaryText)
 
-                    Text("₹\(Int(cartManager.total))")
+                    Text("$\(Int(cartManager.total))")
                         .font(AppFonts.callout)
                         .fontWeight(.semibold)
                         .foregroundColor(AppColors.primaryRed)

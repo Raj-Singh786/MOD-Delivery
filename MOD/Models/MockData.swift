@@ -612,8 +612,8 @@ struct MockData {
         ),
         Reward(
             id: "reward2",
-            name: "₹10 Off",
-            description: "Get ₹10 off your next order",
+            name: "$10 Off",
+            description: "Get $10 off your next order",
             pointsRequired: 250,
             image: "discount_offer", category: .discount,
             eligibleLocation: "Online Only"
@@ -692,7 +692,7 @@ struct MockData {
             id: "trans3",
             type: .redeemed,
             points: -250,
-            description: "₹10 Off Reward",
+            description: "$10 Off Reward",
             rewardId: "reward2",
             status: .completed,
             createdAt: Date().addingTimeInterval(-86400 * 14),

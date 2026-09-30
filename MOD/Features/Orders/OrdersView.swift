@@ -223,7 +223,7 @@ struct OrderCard: View {
                 
                 Spacer()
                 
-                Text("₹\(Int(order.total))")
+                Text("$\(Int(order.total))")
                     .font(AppFonts.callout)
                     .fontWeight(.semibold)
                     .foregroundColor(AppColors.primaryRed)

@@ -120,7 +120,7 @@ struct RewardsView: View {
                 
                 Text("Available Points")
                     .font(AppFonts.subheadline)
-                    .foregroundColor(AppColors.secondaryText)
+                    .foregroundColor(AppColors.black)
             }
             
             // Pending Points
@@ -132,7 +132,7 @@ struct RewardsView: View {
                     
                     Text("+\(summary.pendingPoints) Points Pending")
                         .font(AppFonts.caption)
-                        .foregroundColor(AppColors.secondaryText)
+                        .foregroundColor(AppColors.black)
                 }
             }
             
@@ -142,7 +142,7 @@ struct RewardsView: View {
                     HStack {
                         Text("\(pointsToNext) points until next reward")
                             .font(AppFonts.subheadline)
-                            .foregroundColor(AppColors.secondaryText)
+                            .foregroundColor(AppColors.black)
                         
                         Spacer()
                     }
@@ -1764,7 +1764,7 @@ struct EnhancedLoyaltyQRView: View {
         guard !isExpired, !isApplied else { return }
 
         if let item = freeDrinkItem {
-            // NOTE: make sure this line is priced at ₹0 (see the note in the chat)
+            // NOTE: make sure this line is priced at $0 (see the note in the chat)
             cartManager.addItem(CartItem(menuItem: item, quantity: 1))
         }
 

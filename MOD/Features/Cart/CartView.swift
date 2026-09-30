@@ -196,7 +196,7 @@ struct CartView: View {
                 
                 Spacer()
                 
-                Text("₹\(Int(cartManager.cart.subtotal))")
+                Text("$\(Int(cartManager.cart.subtotal))")
                     .font(AppFonts.subheadline)
                     .foregroundColor(AppColors.primaryText)
             }
@@ -209,7 +209,7 @@ struct CartView: View {
                     
                     Spacer()
                     
-                    Text("₹\(Int(cartManager.deliveryFee))")
+                    Text("$\(Int(cartManager.deliveryFee))")
                         .font(AppFonts.subheadline)
                         .foregroundColor(AppColors.primaryText)
                 }
@@ -222,7 +222,7 @@ struct CartView: View {
                 
                 Spacer()
                 
-                Text("₹\(Int(cartManager.tax))")
+                Text("$\(Int(cartManager.tax))")
                     .font(AppFonts.subheadline)
                     .foregroundColor(AppColors.primaryText)
             }
@@ -237,7 +237,7 @@ struct CartView: View {
                 
                 Spacer()
                 
-                Text("₹\(Int(cartManager.total))")
+                Text("$\(Int(cartManager.total))")
                     .font(AppFonts.callout)
                     .fontWeight(.semibold)
                     .foregroundColor(AppColors.primaryRed)
@@ -263,7 +263,7 @@ struct CartView: View {
                             .font(AppFonts.subheadline)
                             .foregroundColor(AppColors.secondaryText)
                         
-                        Text("₹\(Int(cartManager.total))")
+                        Text("$\(Int(cartManager.total))")
                             .font(AppFonts.callout)
                             .fontWeight(.semibold)
                             .foregroundColor(AppColors.primaryRed)
@@ -324,7 +324,7 @@ struct CartItemRow: View {
                 
                 Spacer()
                 
-                Text("₹\(Int(item.totalPrice))")
+                Text("$\(Int(item.totalPrice))")
                     .font(AppFonts.callout)
                     .fontWeight(.semibold)
                     .foregroundColor(AppColors.primaryRed)
@@ -420,7 +420,7 @@ struct UpsellItemCard: View {
                     .foregroundColor(AppColors.primaryText)
                     .lineLimit(1)
                 
-                Text("₹\(Int(item.basePrice))")
+                Text("$\(Int(item.basePrice))")
                     .font(AppFonts.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(AppColors.primaryRed)

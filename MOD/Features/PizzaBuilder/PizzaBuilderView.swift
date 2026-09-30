@@ -466,7 +466,7 @@ struct PizzaBuilderView: View {
                 
                 // Add to Cart Button
                 PrimaryButton(
-                    title: "Add to Cart - ₹\(calculatePrice())",
+                    title: "Add to Cart - $\(calculatePrice())",
                     action: addToCart,
                     isDisabled: !isValidConfiguration
                 )
@@ -555,7 +555,7 @@ struct SizeCrustOption: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: AppSpacing.xs) {
-                    Text("₹\(price)")
+                    Text("$\(price)")
                         .font(AppFonts.callout)
                         .fontWeight(.semibold)
                         .foregroundColor(AppColors.primaryRed)

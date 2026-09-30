@@ -184,7 +184,7 @@ struct OrderTrackingView: View {
                             .font(AppFonts.subheadline)
                             .foregroundColor(AppColors.secondaryText)
                         
-                        Text("₹\(Int(item.totalPrice))")
+                        Text("$\(Int(item.totalPrice))")
                             .font(AppFonts.subheadline)
                             .foregroundColor(AppColors.primaryText)
                     }
@@ -199,7 +199,7 @@ struct OrderTrackingView: View {
                     
                     Spacer()
                     
-                    Text("₹\(Int(order.subtotal))")
+                    Text("$\(Int(order.subtotal))")
                         .font(AppFonts.subheadline)
                         .foregroundColor(AppColors.primaryText)
                 }
@@ -212,7 +212,7 @@ struct OrderTrackingView: View {
                         
                         Spacer()
                         
-                        Text("₹\(Int(order.deliveryFee))")
+                        Text("$\(Int(order.deliveryFee))")
                             .font(AppFonts.subheadline)
                             .foregroundColor(AppColors.primaryText)
                     }
@@ -225,7 +225,7 @@ struct OrderTrackingView: View {
                     
                     Spacer()
                     
-                    Text("₹\(Int(order.tax))")
+                    Text("$\(Int(order.tax))")
                         .font(AppFonts.subheadline)
                         .foregroundColor(AppColors.primaryText)
                 }
@@ -240,7 +240,7 @@ struct OrderTrackingView: View {
                     
                     Spacer()
                     
-                    Text("₹\(Int(order.total))")
+                    Text("$\(Int(order.total))")
                         .font(AppFonts.callout)
                         .fontWeight(.semibold)
                         .foregroundColor(AppColors.primaryRed)

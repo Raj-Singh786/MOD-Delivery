@@ -362,7 +362,7 @@ struct HomeView: View {
                     if let pointsToNext = summary.pointsToNextReward {
                         VStack(alignment: .leading, spacing: AppSpacing.xs) {
                             let progress = Int((Double(summary.availablePoints) / Double(summary.availablePoints + pointsToNext)) * 100)
-                            Text("\(pointsToNext) points until ₹100 Off")
+                            Text("\(pointsToNext) points until $100 Off")
                                 .font(AppFonts.subheadline)
                                 .foregroundColor(AppColors.secondaryText)
                             
@@ -782,7 +782,7 @@ struct MenuItemCard: View {
                 .padding(.top, 4)
 
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("₹\(Int(item.basePrice))")
+                Text("$\(Int(item.basePrice))")
                     .font(.system(size: 22, weight: .heavy))
                     .foregroundColor(AppColors.primaryRed)
 

@@ -3,7 +3,7 @@ import Foundation
 extension String {
     // Currency formatting
     var asCurrency: String {
-        return "₹\(self)"
+        return "$\(self)"
     }
     
     // Validate mobile number

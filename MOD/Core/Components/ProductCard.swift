@@ -66,7 +66,7 @@ struct ProductCard: View {
                 }
                 
                 HStack {
-                    Text("₹\(Int(item.basePrice))")
+                    Text("$\(Int(item.basePrice))")
                         .font(AppFonts.callout)
                         .fontWeight(.semibold)
                         .foregroundColor(AppColors.primaryRed)
