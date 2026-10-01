@@ -170,6 +170,7 @@ struct CartView: View {
                 Spacer()
                 
                 Button(action: {
+                    dismiss()
                     appRouter.selectTab(.rewards)
                 }) {
                     Text("View Rewards")
@@ -300,102 +301,119 @@ struct CartView: View {
 }
 
 // MARK: - Cart Item Row
+// MARK: - Cart Item Row
 struct CartItemRow: View {
     let item: CartItem
     let onEdit: () -> Void
     let onRemove: () -> Void
     @EnvironmentObject var cartManager: CartManager
-    
+
+    // "Mozzarella, Pepperoni, Basil" — all toppings in one line
+    private var toppingsText: String? {
+        guard let config = item.pizzaConfiguration else { return nil }
+        let ids = config.cheese.map(\.ingredientId)
+            + config.meats.map(\.ingredientId)
+            + config.vegetables.map(\.ingredientId)
+        let names = ids.compactMap { id in
+            MockData.ingredients.first { $0.id == id }?.name
+        }
+        return names.isEmpty ? nil : names.joined(separator: ", ")
+    }
+
+    private var estimatedPoints: Int {
+        Int(item.totalPrice * Constants.loyaltyPointsPerRupee)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.md) {
-            // Item Header
-            HStack {
-                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(item.displayName)
-                        .font(AppFonts.callout)
-                        .foregroundColor(AppColors.primaryText)
-                    
+        VStack(spacing: AppSpacing.md) {
+            HStack(alignment: .top, spacing: AppSpacing.md) {
+                // Product photo
+                RewardImage(imageName: item.menuItem.image, iconSize: 28, fallbackIcon: "fork.knife")
+                    .frame(width: 88, height: 88)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .top) {
+                        Text(item.displayName)
+                            .font(AppFonts.callout)
+                            .foregroundColor(AppColors.primaryText)
+                            .lineLimit(2)
+
+                        Spacer(minLength: 8)
+
+                        Text("$\(Int(item.totalPrice))")
+                            .font(AppFonts.callout)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AppColors.primaryRed)
+                    }
+
                     if let config = item.pizzaConfiguration {
-                        Text("\(config.size.displayName) \(config.crust.displayName)")
+                        Text("\(config.size.displayName) · \(config.crust.displayName)")
                             .font(AppFonts.caption)
                             .foregroundColor(AppColors.secondaryText)
                     }
-                }
-                
-                Spacer()
-                
-                Text("$\(Int(item.totalPrice))")
-                    .font(AppFonts.callout)
-                    .fontWeight(.semibold)
-                    .foregroundColor(AppColors.primaryRed)
-            }
-            
-            // Added estimated points text
-            let estimatedPoints = Int(item.totalPrice * Constants.loyaltyPointsPerRupee)
-            Text("+\(estimatedPoints) pts")
-                .font(AppFonts.caption)
-                .foregroundColor(AppColors.success)
-            
-            // Item Details
-            if let config = item.pizzaConfiguration {
-                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    if !config.cheese.isEmpty {
-                        Text(config.cheese.compactMap { cheese in
-                            MockData.ingredients.first { $0.id == cheese.ingredientId }?.name
-                        }.joined(separator: ", "))
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.secondaryText)
+
+                    if let toppings = toppingsText {
+                        Text(toppings)
+                            .font(AppFonts.caption)
+                            .foregroundColor(AppColors.tertiaryText)
+                            .lineLimit(2)
                     }
-                    
-                    if !config.meats.isEmpty {
-                        Text(config.meats.compactMap { meat in
-                            MockData.ingredients.first { $0.id == meat.ingredientId }?.name
-                        }.joined(separator: ", "))
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.secondaryText)
-                    }
-                    
-                    if !config.vegetables.isEmpty {
-                        Text(config.vegetables.compactMap { veg in
-                            MockData.ingredients.first { $0.id == veg.ingredientId }?.name
-                        }.joined(separator: ", "))
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.secondaryText)
-                    }
+
+                    Text("+\(estimatedPoints) pts")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(AppColors.success)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(AppColors.success.opacity(0.12)))
+                        .padding(.top, 2)
                 }
             }
-            
-            // Quantity and Actions
+
+            Divider()
+
+            // Quantity and actions
             HStack {
                 QuantityStepper(quantity: Binding(
                     get: { item.quantity },
                     set: { cartManager.updateQuantity(item.id, quantity: $0) }
                 ))
-                
+
                 Spacer()
-                
+
                 if item.pizzaConfiguration != nil {
                     Button(action: onEdit) {
-                        Text("Edit")
-                            .font(AppFonts.subheadline)
-                            .foregroundColor(AppColors.primaryRed)
-                    }
-                }
-                
-                Button(action: onRemove) {
-                    Text("Remove")
+                        HStack(spacing: 4) {
+                            Image(systemName: "pencil")
+                            Text("Edit")
+                        }
                         .font(AppFonts.subheadline)
-                        .foregroundColor(AppColors.error)
+                        .foregroundColor(AppColors.primaryRed)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(AppColors.primaryRed.opacity(0.1)))
+                    }
+                    .buttonStyle(.plain)
                 }
+
+                Button(action: onRemove) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 14))
+                        .foregroundColor(AppColors.error)
+                        .frame(width: 34, height: 34)
+                        .background(Circle().fill(AppColors.error.opacity(0.1)))
+                }
+                .buttonStyle(.plain)
             }
         }
-        .padding(AppSpacing.lg)
+        .padding(AppSpacing.md)
         .background(AppColors.white)
         .cornerRadius(AppSpacing.cornerRadius)
+        .shadow(color: AppColors.shadow, radius: 2, x: 0, y: 1)
     }
 }
 
-// MARK: - Upsell Item Card
+
 // MARK: - Upsell Item Card
 struct UpsellItemCard: View {
     let item: MenuItem
@@ -476,3 +494,7 @@ struct EditPizzaCartItemView: View {
         .environmentObject(AppRouter())
         .environmentObject(AppState.shared)
 }
+
+
+
+

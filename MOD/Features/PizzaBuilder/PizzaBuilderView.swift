@@ -71,7 +71,7 @@ struct PizzaBuilderView: View {
                     stickyFooter
                 }
             }
-            .navigationTitle("Create Your Own Pizza")
+            .navigationTitle("Margherita Pizza")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

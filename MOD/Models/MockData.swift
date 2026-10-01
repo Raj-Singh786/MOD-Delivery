@@ -17,7 +17,7 @@ struct MockData {
         MenuItem(
             id: "item1",
             categoryId: "cat1",
-            name: "Create Your Own Pizza",
+            name: "Margherita Pizza",
             description: "Customize with 40+ toppings",
             image: "pizza",
             basePrice: 299,

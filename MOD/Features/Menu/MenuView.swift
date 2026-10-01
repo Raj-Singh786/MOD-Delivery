@@ -270,7 +270,7 @@ struct MenuItemRow: View {
                             appRouter.showPizzaBuilderScreen(menuItem: item)
                         }) {
                             HStack(spacing: AppSpacing.xs) {
-                                Text("Customize")
+                                Text("Place Order")
                                     .font(AppFonts.callout)
                                     .fontWeight(.bold)
                                 
