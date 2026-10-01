@@ -266,8 +266,11 @@ struct RewardsView: View {
                 emptyOffersView
             } else {
                 ForEach(campaigns) { campaign in
-                    CampaignCard(campaign: campaign)
-                        .padding(.horizontal, AppSpacing.lg)
+                    CampaignCard(
+                        campaign: campaign,
+                        onOrder: { appRouter.selectTab(.menu) }
+                    )
+                    .padding(.horizontal, AppSpacing.lg)
                 }
             }
         }
@@ -775,8 +778,10 @@ struct TransactionRow: View {
 }
 
 // MARK: - Campaign Card
+// MARK: - Campaign Card
 struct CampaignCard: View {
     let campaign: Campaign
+    let onOrder: () -> Void          // ← new: goes to the Menu screen
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -794,17 +799,22 @@ struct CampaignCard: View {
                     .foregroundColor(AppColors.secondaryText)
                     .lineLimit(2)
 
-                if let callToAction = campaign.callToAction {
-                    Button(action: {}) {
-                        Text(callToAction)
-                            .font(AppFonts.caption)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.vertical, AppSpacing.xs)
-                            .background(AppColors.primaryRed)
-                            .cornerRadius(AppSpacing.smallCornerRadius)
+                // Order button: uses the campaign's own text, or "Order Now"
+                Button(action: onOrder) {
+                    HStack(spacing: 4) {
+                        Text(campaign.callToAction ?? "Order Now")
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
                     }
+                    .font(AppFonts.caption)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.vertical, AppSpacing.xs)
+                    .background(AppColors.primaryRed)
+                    .cornerRadius(AppSpacing.smallCornerRadius)
                 }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
             }
         }
         .padding(AppSpacing.md)
