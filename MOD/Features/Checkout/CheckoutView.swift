@@ -342,6 +342,20 @@ struct CheckoutView: View {
                     .foregroundColor(AppColors.primaryText)
             }
             
+            if cartManager.pointsDiscount > 0 {
+                HStack {
+                    Text("Points discount (\(CartManager.pointsDiscountCost) pts)")
+                        .font(AppFonts.subheadline)
+                        .foregroundColor(AppColors.success)
+                    
+                    Spacer()
+                    
+                    Text("-$\(Int(cartManager.pointsDiscount))")
+                        .font(AppFonts.subheadline)
+                        .foregroundColor(AppColors.success)
+                }
+            }
+            
             if cartManager.deliveryFee > 0 {
                 HStack {
                     Text("Delivery Fee")
@@ -455,6 +469,7 @@ struct CheckoutView: View {
                     subtotal: cartManager.cart.subtotal,
                     deliveryFee: cartManager.deliveryFee,
                     tax: cartManager.tax,
+                    discount: cartManager.discount,
                     total: cartManager.total,
                     customer: Customer(name: customerName.trimmingCharacters(in: .whitespaces),
                                        mobileNumber: customerPhone),

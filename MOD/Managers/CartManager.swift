@@ -56,6 +56,7 @@ class CartManager: ObservableObject {
     
     func clearCart() {
         cart.clear()
+        pointsRedeemed = 0
         saveCart()
     }
     
@@ -110,11 +111,11 @@ class CartManager: ObservableObject {
     }
     
     var discount: Double {
-        0.0 // Will be calculated based on rewards
+        pointsDiscount
     }
     
     var total: Double {
-        cart.subtotal + deliveryFee + tax - discount
+        max(0, cart.subtotal + deliveryFee + tax - discount)
     }
     
     var estimatedPoints: Int {

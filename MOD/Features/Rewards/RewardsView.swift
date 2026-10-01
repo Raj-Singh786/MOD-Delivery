@@ -173,7 +173,7 @@ struct RewardsView: View {
         .padding(AppSpacing.lg)
         .background(
             LinearGradient(
-                gradient: Gradient(colors: [AppColors.lightGray, AppColors.darkGray]),
+                gradient: Gradient(colors: [AppColors.lightGray, AppColors.gold]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

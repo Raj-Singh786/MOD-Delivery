@@ -21,11 +21,12 @@ struct LoginView: View {
     let onLoginComplete: () -> Void
     
     @State private var mobileNumber: String = ""
-    @State private var countryCode: String = "+91"
+    @State private var countryCode: String = "+1"
     
     private let countryOptions: [(flag: String, code: String)] = [
-        ("🇮🇳", "+91"),
-        ("🇺🇸", "+1")
+        ("🇺🇸", "+1"),
+        ("🇮🇳", "+91")
+       
     ]
     
     private var selectedFlag: String {
@@ -75,10 +76,10 @@ struct LoginView: View {
     private var logo: some View {
         HStack(spacing: 10) {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.gray.opacity(0.5))
+                .fill(Color.gray.opacity(0.3))
                 .frame(width: 42, height: 42)
                 .overlay(
-                    Image("shield-icon").resizable().scaledToFit().frame(width: 28, height: 28)
+                    Image("shield-icon").resizable().scaledToFit().frame(width: 25, height: 25)
                 )
             
             HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -119,7 +120,7 @@ struct LoginView: View {
                 TextField(
                     "",
                     text: $mobileNumber,
-                    prompt: Text("98765 43210").foregroundColor(.modPlaceholder)
+                    prompt: Text("(415) 555-0132").foregroundColor(.modPlaceholder)
                 )
                 .keyboardType(.numberPad)
                 .textContentType(.telephoneNumber)
