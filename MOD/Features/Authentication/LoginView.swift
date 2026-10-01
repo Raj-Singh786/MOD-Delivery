@@ -75,13 +75,10 @@ struct LoginView: View {
     private var logo: some View {
         HStack(spacing: 10) {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.modRed)
+                .fill(Color.gray.opacity(0.5))
                 .frame(width: 42, height: 42)
                 .overlay(
-                    Image(systemName: "triangle.fill")
-                        .font(.system(size: 16))
-                        .rotationEffect(.degrees(180))
-                        .foregroundColor(.white)
+                    Image("shield-icon").resizable().scaledToFit().frame(width: 28, height: 28)
                 )
             
             HStack(alignment: .firstTextBaseline, spacing: 4) {
