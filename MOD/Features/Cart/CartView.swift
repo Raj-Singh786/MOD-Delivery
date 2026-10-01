@@ -12,6 +12,58 @@ struct CartView: View {
     
     private let menuRepository = MockMenuRepository.shared
     
+    @State private var availablePoints: Int = 0
+    private let loyaltyRepository = MockLoyaltyRepository.shared
+    
+    
+    private var pointsDiscountBanner: some View {
+        let cost = CartManager.pointsDiscountCost
+        let applied = cartManager.pointsRedeemed > 0
+        let canAfford = availablePoints >= cost
+
+        return HStack(spacing: AppSpacing.sm) {
+            Image(systemName: applied ? "checkmark.seal.fill" : "star.circle.fill")
+                .font(.system(size: 18))
+                .foregroundColor(Color(hex: "F6C244"))
+
+            Text(applied ? "$5 off applied · \(cost) pts"
+                 : canAfford ? "Get $5 off using \(cost) pts"
+                 : "Need \(cost) pts for $5 off (you have \(availablePoints))")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            Spacer(minLength: 4)
+
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    if applied { cartManager.removePointsDiscount() }
+                    else { cartManager.applyPointsDiscount() }
+                }
+            }) {
+                Text(applied ? "Remove" : "Apply")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(Color(hex: "7A130F"))
+                    .padding(.horizontal, 14)
+                    .frame(height: 28)
+                    .background(Capsule().fill(Color.white))
+            }
+            .buttonStyle(.plain)
+            .disabled(!applied && !canAfford)
+            .opacity(!applied && !canAfford ? 0.5 : 1)
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 40)                                  // ← 40pt banner
+        .background(
+            LinearGradient(colors: [Color(hex: "A0281F"), Color(hex: "7A130F")],
+                           startPoint: .leading, endPoint: .trailing)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.top, AppSpacing.xl)
+    }
+    
     var body: some View {
         NavigationView {
             ZStack {
@@ -47,6 +99,8 @@ struct CartView: View {
                                 
                                 // Loyalty Section
                                 loyaltySection
+                                
+                                pointsDiscountBanner
                                 
                                 // Order Summary
                                 orderSummary
@@ -88,6 +142,9 @@ struct CartView: View {
         }
         .task {
             await loadUpsellItems()
+            if let summary = try? await loyaltyRepository.getLoyaltySummary() {
+                availablePoints = summary.availablePoints
+            }
         }
     }
     
@@ -201,6 +258,20 @@ struct CartView: View {
                     .font(AppFonts.subheadline)
                     .foregroundColor(AppColors.primaryText)
             }
+            
+            if cartManager.pointsDiscount > 0 {
+                       HStack {
+                           Text("Points discount (\(CartManager.pointsDiscountCost) pts)")
+                               .font(AppFonts.subheadline)
+                               .foregroundColor(AppColors.success)
+                           
+                           Spacer()
+                           
+                           Text("-$\(Int(cartManager.pointsDiscount))")
+                               .font(AppFonts.subheadline)
+                               .foregroundColor(AppColors.success)
+                       }
+                   }
             
             if cartManager.deliveryFee > 0 {
                 HStack {
@@ -487,6 +558,9 @@ struct EditPizzaCartItemView: View {
         }
     }
 }
+
+// MARK: - Points Discount Banner
+
 
 #Preview {
     CartView()

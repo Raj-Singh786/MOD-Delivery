@@ -12,6 +12,19 @@ class CartManager: ObservableObject {
     
     private let userDefaults = UserDefaults.standard
     
+    // MARK: - Points discount ($5 off for 200 pts)
+    static let pointsDiscountAmount: Double = 5
+    static let pointsDiscountCost: Int = 200
+
+    @Published var pointsRedeemed: Int = 0      // 0 = not applied
+
+    var pointsDiscount: Double {
+        pointsRedeemed > 0 ? min(cart.subtotal, Self.pointsDiscountAmount) : 0
+    }
+
+    func applyPointsDiscount()  { pointsRedeemed = Self.pointsDiscountCost }
+    func removePointsDiscount() { pointsRedeemed = 0 }
+    
     private init() {
         loadCart()
     }
