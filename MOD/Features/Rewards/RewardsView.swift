@@ -6,11 +6,9 @@ struct RewardsView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var appRouter: AppRouter
     
-    @State private var loyaltySummary: LoyaltySummary?
     @State private var rewards: [Reward] = []
     @State private var campaigns: [Campaign] = []
     @State private var userRewards: [UserReward] = []
-    @State private var transactions: [LoyaltyTransaction] = []
     @State private var selectedTab: RewardsTab = .overview
     @State private var isLoading: Bool = true
     @State private var errorMessage: String?
@@ -18,7 +16,10 @@ struct RewardsView: View {
     @State private var loyaltyQR: LoyaltyQR?
     @State private var selectedReward: Reward? = nil
     
-    private let loyaltyRepository = MockLoyaltyRepository.shared
+    @ObservedObject private var loyaltyRepository = MockLoyaltyRepository.shared
+    
+    private var loyaltySummary: LoyaltySummary { loyaltyRepository.currentSummary }
+    private var transactions: [LoyaltyTransaction] { loyaltyRepository.currentTransactions }
     
     enum RewardsTab: String, CaseIterable {
         case overview = "overview"
@@ -48,10 +49,7 @@ struct RewardsView: View {
                     ErrorView(message: errorMessage, retryAction: loadData)
                 } else {
                     VStack(spacing: 0) {
-                        // Loyalty Summary Card
-                        if let summary = loyaltySummary {
-                            loyaltySummaryCard(summary: summary)
-                        }
+                        loyaltySummaryCard(summary: loyaltySummary)
                         
                         // Tab Selector
                         rewardsTabSelector
@@ -210,9 +208,7 @@ struct RewardsView: View {
     private var overviewContent: some View {
         VStack(spacing: AppSpacing.lg) {
             // Quick Stats
-            if let summary = loyaltySummary {
-                quickStatsSection(summary: summary)
-            }
+            quickStatsSection(summary: loyaltySummary)
             
             // Available Rewards Preview
             if !rewards.isEmpty {
@@ -448,20 +444,16 @@ struct RewardsView: View {
         errorMessage = nil
         
         do {
-            async let summary = loyaltyRepository.getLoyaltySummary()
             async let rewardsData = loyaltyRepository.getRewards()
             async let campaignsData = loyaltyRepository.getCampaigns()
-            async let transactionsData = loyaltyRepository.getLoyaltyTransactions()
             async let userRewardsData = loyaltyRepository.getUserRewards()
             async let qrData = loyaltyRepository.getLoyaltyQR()
             
-            let (summaryResult, rewardsResult, campaignsResult, transactionsResult, userRewardsResult, qrResult) = try await (summary, rewardsData, campaignsData, transactionsData, userRewardsData, qrData)
+            let (rewardsResult, campaignsResult, userRewardsResult, qrResult) = try await (rewardsData, campaignsData, userRewardsData, qrData)
             
             await MainActor.run {
-                self.loyaltySummary = summaryResult
                 self.rewards = rewardsResult
                 self.campaigns = campaignsResult
-                self.transactions = transactionsResult
                 self.userRewards = userRewardsResult
                 self.loyaltyQR = qrResult
                 self.isLoading = false

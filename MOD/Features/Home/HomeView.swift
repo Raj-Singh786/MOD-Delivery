@@ -49,14 +49,13 @@ struct HomeView: View {
     @EnvironmentObject var cartManager: CartManager
     
     @State private var offerBanners: [OfferBanner] = []
-    @State private var loyaltySummary: LoyaltySummary?
     @State private var popularItems: [MenuItem] = []
     @State private var latestOffers: [LatestOffer] = []
     @State private var isLoading: Bool = true
     @State private var errorMessage: String?
     
+    @ObservedObject private var loyaltyRepository = MockLoyaltyRepository.shared
     private let restaurantRepository = MockRestaurantRepository.shared
-    private let loyaltyRepository = MockLoyaltyRepository.shared
     private let menuRepository = MockMenuRepository.shared
     
     var body: some View {
@@ -323,8 +322,8 @@ struct HomeView: View {
     
     private var loyaltySummarySection: some View {
         VStack(spacing: AppSpacing.md) {
-            if let summary = loyaltySummary {
-                VStack(spacing: AppSpacing.md) {
+            let summary = loyaltyRepository.currentSummary
+            VStack(spacing: AppSpacing.md) {
                     HStack {
                         Text("Your MOD Rewards")
                             .font(AppFonts.title)
@@ -382,7 +381,6 @@ struct HomeView: View {
                 .padding(AppSpacing.lg)
                 .cardStyle()
                 .padding(.horizontal, AppSpacing.lg)
-            }
         }
         .padding(.top, AppSpacing.xl)
     }
@@ -485,14 +483,12 @@ struct HomeView: View {
         
         do {
             async let banners = restaurantRepository.getOfferBanners()
-            async let loyalty = loyaltyRepository.getLoyaltySummary()
             async let items = menuRepository.getMenuItems()
             
-            let (bannersResult, loyaltyResult, itemsResult) = try await (banners, loyalty, items)
+            let (bannersResult, itemsResult) = try await (banners, items)
             
             await MainActor.run {
                 self.offerBanners = bannersResult
-                self.loyaltySummary = loyaltyResult
                 self.popularItems = itemsResult.filter { $0.isPopular }
                 self.latestOffers = MockData.latestOffers.filter { $0.isActive }
                 self.isLoading = false

@@ -15,7 +15,16 @@ class MockOrderRepository: OrderRepositoryProtocol {
         var createdOrder = order
         createdOrder.status = .confirmed
         createdOrder.estimatedTime = Date().addingTimeInterval(1800) // 30 minutes from now
-        createdOrder.loyaltyPointsEarned = Int(order.subtotal * Constants.loyaltyPointsPerRupee)
+        let earnedPoints = Int((order.subtotal * Constants.loyaltyPointsPerRupee).rounded())
+        createdOrder.loyaltyPointsEarned = earnedPoints
+        
+        await MainActor.run {
+            MockLoyaltyRepository.shared.addPendingPoints(
+                points: earnedPoints,
+                orderNumber: createdOrder.orderNumber,
+                orderId: createdOrder.id
+            )
+        }
         
         orders.append(createdOrder)
         return createdOrder
