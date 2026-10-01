@@ -143,8 +143,9 @@ struct MockData {
         MenuItem(
             id: "item10",
             categoryId: "cat6",
-            name: "Soft Drink",
+            name: "Free Drink",
             description: "Refreshing soda",
+            image: "free_drink",
             basePrice: 79,
             calories: 140,
             isCustomizable: false,
