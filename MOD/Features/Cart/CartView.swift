@@ -15,6 +15,10 @@ struct CartView: View {
     @State private var availablePoints: Int = 0
     private let loyaltyRepository = MockLoyaltyRepository.shared
     
+    @State private var couponCodeInput: String = ""
+    @State private var showCouponError: Bool = false
+    @State private var couponErrorMessage: String = ""
+    
     
     private var pointsDiscountBanner: some View {
         let cost = CartManager.pointsDiscountCost
@@ -64,6 +68,117 @@ struct CartView: View {
         .padding(.top, AppSpacing.xl)
     }
     
+    // MARK: - Coupon Code Section
+    
+    private var couponCodeSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack {
+                Image(systemName: "tag.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(AppColors.primaryRed)
+                
+                Text("Apply Coupon Code")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppColors.primaryText)
+                
+                Spacer()
+                
+                if let appliedCode = cartManager.appliedCouponCode {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            cartManager.removeCouponCode()
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 16))
+                            Text("Remove")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundColor(Color(hex: "7A130F"))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            
+            if let appliedCode = cartManager.appliedCouponCode {
+                HStack {
+                    Text("Code Applied: \(appliedCode)")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(AppColors.success)
+                    
+                    Spacer()
+                    
+                    Text("-$\(Int(cartManager.couponDiscount))")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(AppColors.success)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(AppColors.success.opacity(0.1))
+                .cornerRadius(8)
+            } else {
+                HStack(spacing: AppSpacing.sm) {
+                    TextField("Enter coupon code", text: $couponCodeInput)
+                        .font(.system(size: 14))
+                        .textFieldStyle(.plain)
+                        .autocapitalization(.allCharacters)
+                        .disableAutocorrection(true)
+                        .onChange(of: couponCodeInput) { _, newValue in
+                            couponCodeInput = newValue.uppercased()
+                            showCouponError = false
+                        }
+                    
+                    Button(action: {
+                        applyCouponCode()
+                    }) {
+                        Text("Apply")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(couponCodeInput.isEmpty ? Color.gray : AppColors.primaryRed)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(couponCodeInput.isEmpty)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(AppColors.white)
+                .cornerRadius(8)
+                
+                if showCouponError {
+                    Text(couponErrorMessage)
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.error)
+                        .padding(.horizontal, 4)
+                }
+            }
+        }
+        .padding(AppSpacing.lg)
+        .background(AppColors.white)
+        .cornerRadius(AppSpacing.cornerRadius)
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.top, AppSpacing.md)
+    }
+    
+    private func applyCouponCode() {
+        let validation = cartManager.validateCouponCode(couponCodeInput)
+        
+        if validation.isValid {
+            if cartManager.applyCouponCode(couponCodeInput) {
+                couponCodeInput = ""
+                showCouponError = false
+            }
+        } else {
+            showCouponError = true
+            couponErrorMessage = validation.message ?? "Invalid coupon code"
+        }
+    }
+    
     var body: some View {
         NavigationView {
             ZStack {
@@ -99,6 +214,9 @@ struct CartView: View {
                                 
                                 // Loyalty Section
                                 loyaltySection
+                                
+                                // Coupon Code Section
+                                couponCodeSection
                                 
                                 pointsDiscountBanner
                                 
@@ -272,6 +390,20 @@ struct CartView: View {
                                .foregroundColor(AppColors.success)
                        }
                    }
+            
+            if cartManager.couponDiscount > 0 {
+                HStack {
+                    Text("Coupon discount (\(cartManager.appliedCouponCode ?? ""))")
+                        .font(AppFonts.subheadline)
+                        .foregroundColor(AppColors.success)
+                    
+                    Spacer()
+                    
+                    Text("-$\(Int(cartManager.couponDiscount))")
+                        .font(AppFonts.subheadline)
+                        .foregroundColor(AppColors.success)
+                }
+            }
             
             if cartManager.deliveryFee > 0 {
                 HStack {

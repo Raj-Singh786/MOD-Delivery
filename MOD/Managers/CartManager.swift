@@ -24,6 +24,76 @@ class CartManager: ObservableObject {
 
     func applyPointsDiscount()  { pointsRedeemed = Self.pointsDiscountCost }
     func removePointsDiscount() { pointsRedeemed = 0 }
+
+    // MARK: - Coupon Code
+    @Published var appliedCouponCode: String? = nil
+
+    // Valid coupon codes with their discount details
+    private let couponCodes: [String: CouponDetails] = [
+        "MODFEAST": CouponDetails(discountType: .percentage, value: 50, minOrderValue: 299),
+        "BOGOTU": CouponDetails(discountType: .percentage, value: 50, minOrderValue: 399),
+        "SAVE10": CouponDetails(discountType: .percentage, value: 10, minOrderValue: 0),
+        "FLAT20": CouponDetails(discountType: .flat, value: 20, minOrderValue: 0)
+    ]
+
+    struct CouponDetails {
+        let discountType: DiscountType
+        let value: Double
+        let minOrderValue: Double
+    }
+
+    enum DiscountType {
+        case percentage
+        case flat
+    }
+
+    var couponDiscount: Double {
+        guard let code = appliedCouponCode,
+              let coupon = couponCodes[code] else { return 0 }
+
+        // Check minimum order value
+        if cart.subtotal < coupon.minOrderValue {
+            return 0
+        }
+
+        switch coupon.discountType {
+        case .percentage:
+            return cart.subtotal * (coupon.value / 100)
+        case .flat:
+            return min(coupon.value, cart.subtotal)
+        }
+    }
+
+    func applyCouponCode(_ code: String) -> Bool {
+        let uppercasedCode = code.uppercased().trimmingCharacters(in: .whitespaces)
+        
+        guard couponCodes[uppercasedCode] != nil else {
+            return false
+        }
+
+        appliedCouponCode = uppercasedCode
+        saveCart()
+        return true
+    }
+
+    func removeCouponCode() {
+        appliedCouponCode = nil
+        saveCart()
+    }
+
+    func validateCouponCode(_ code: String) -> (isValid: Bool, message: String?) {
+        let uppercasedCode = code.uppercased().trimmingCharacters(in: .whitespaces)
+        
+        guard let coupon = couponCodes[uppercasedCode] else {
+            return (false, "Invalid coupon code")
+        }
+
+        if cart.subtotal < coupon.minOrderValue {
+            return (false, "Minimum order value ₹\(Int(coupon.minOrderValue)) required")
+        }
+
+        return (true, nil)
+    }
     
     private init() {
         loadCart()
@@ -57,6 +127,7 @@ class CartManager: ObservableObject {
     func clearCart() {
         cart.clear()
         pointsRedeemed = 0
+        appliedCouponCode = nil
         saveCart()
     }
     
@@ -86,6 +157,8 @@ class CartManager: ObservableObject {
         if let encoded = try? JSONEncoder().encode(cart) {
             userDefaults.set(encoded, forKey: Constants.guestCartKey)
         }
+        // Save coupon code separately
+        userDefaults.set(appliedCouponCode, forKey: "appliedCouponCode")
     }
     
     private func loadCart() {
@@ -93,6 +166,8 @@ class CartManager: ObservableObject {
            let decoded = try? JSONDecoder().decode(Cart.self, from: data) {
             self.cart = decoded
         }
+        // Load coupon code
+        appliedCouponCode = userDefaults.string(forKey: "appliedCouponCode")
     }
     
     // MARK: - Calculations
@@ -111,7 +186,7 @@ class CartManager: ObservableObject {
     }
     
     var discount: Double {
-        pointsDiscount
+        pointsDiscount + couponDiscount
     }
     
     var total: Double {
